@@ -1,7 +1,8 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2014-2015 Samsung Electronics
  * Przemyslaw Marczak <p.marczak@samsung.com>
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 #include <common.h>
 #include <errno.h>
@@ -75,9 +76,8 @@ static int do_list(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 
 static int do_dump(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
-	struct uc_pmic_priv *priv;
 	struct udevice *dev;
-	char fmt[16];
+	uint8_t value;
 	uint reg;
 	int ret;
 
@@ -87,15 +87,12 @@ static int do_dump(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	}
 
 	dev = currdev;
-	priv = dev_get_uclass_priv(dev);
+
 	printf("Dump pmic: %s registers\n", dev->name);
 
-	sprintf(fmt, "%%%d.%dx ", priv->trans_len * 2,
-		priv->trans_len * 2);
-
 	for (reg = 0; reg < pmic_reg_count(dev); reg++) {
-		ret = pmic_reg_read(dev, reg);
-		if (ret < 0) {
+		ret = pmic_read(dev, reg, &value, 1);
+		if (ret) {
 			printf("Can't read register: %d\n", reg);
 			return failure(ret);
 		}
@@ -103,7 +100,7 @@ static int do_dump(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		if (!(reg % 16))
 			printf("\n0x%02x: ", reg);
 
-		printf(fmt, ret);
+		printf("%2.2x ", value);
 	}
 	printf("\n");
 
@@ -112,10 +109,9 @@ static int do_dump(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 
 static int do_read(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
-	struct uc_pmic_priv *priv;
 	struct udevice *dev;
 	int regs, ret;
-	char fmt[24];
+	uint8_t value;
 	uint reg;
 
 	if (!currdev) {
@@ -124,7 +120,6 @@ static int do_read(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	}
 
 	dev = currdev;
-	priv = dev_get_uclass_priv(dev);
 
 	if (argc != 2)
 		return CMD_RET_USAGE;
@@ -136,15 +131,13 @@ static int do_read(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		return failure(-EFAULT);
 	}
 
-	ret = pmic_reg_read(dev, reg);
-	if (ret < 0) {
+	ret = pmic_read(dev, reg, &value, 1);
+	if (ret) {
 		printf("Can't read PMIC register: %d!\n", reg);
 		return failure(ret);
 	}
 
-	sprintf(fmt, "0x%%02x: 0x%%%d.%dx\n", priv->trans_len * 2,
-		priv->trans_len * 2);
-	printf(fmt, reg, ret);
+	printf("0x%02x: 0x%2.2x\n", reg, value);
 
 	return CMD_RET_SUCCESS;
 }
@@ -152,8 +145,9 @@ static int do_read(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 static int do_write(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	struct udevice *dev;
-	uint reg, value;
 	int regs, ret;
+	uint8_t value;
+	uint reg;
 
 	if (!currdev) {
 		printf("First, set the PMIC device!\n");
@@ -174,7 +168,7 @@ static int do_write(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 
 	value = simple_strtoul(argv[2], NULL, 0);
 
-	ret = pmic_reg_write(dev, reg, value);
+	ret = pmic_write(dev, reg, &value, 1);
 	if (ret) {
 		printf("Can't write PMIC register: %d!\n", reg);
 		return failure(ret);
@@ -207,7 +201,7 @@ static int do_pmic(cmd_tbl_t *cmdtp, int flag, int argc,
 }
 
 U_BOOT_CMD(pmic, CONFIG_SYS_MAXARGS, 1, do_pmic,
-	"PMIC sub-system",
+	" operations",
 	"list          - list pmic devices\n"
 	"pmic dev [name]    - show or [set] operating PMIC device\n"
 	"pmic dump          - dump registers\n"
