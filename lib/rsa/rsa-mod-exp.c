@@ -1,6 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (c) 2013, Google Inc.
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef USE_HOSTCC
@@ -249,6 +250,11 @@ static void rsa_convert_big_endian(uint32_t *dst, const uint32_t *src, int len)
 int rsa_mod_exp_sw(const uint8_t *sig, uint32_t sig_len,
 		struct key_prop *prop, uint8_t *out)
 {
+#ifndef USE_HOSTCC
+	__cacheline_aligned uint64_t tmp;
+#else
+	uint64_t tmp;
+#endif
 	struct rsa_public_key key;
 	int ret;
 
@@ -259,11 +265,19 @@ int rsa_mod_exp_sw(const uint8_t *sig, uint32_t sig_len,
 	key.n0inv = prop->n0inv;
 	key.len = prop->num_bits;
 
-	if (!prop->public_exponent)
+	if (!prop->public_exponent) {
 		key.exponent = RSA_DEFAULT_PUBEXP;
-	else
-		key.exponent =
-			fdt64_to_cpu(*((uint64_t *)(prop->public_exponent)));
+	} else {
+		/*
+		 * it seems fdt64_to_cpu() input param address must be 8-bytes
+		 * align, otherwise it brings a data-abort. No root cause was
+		 * found.
+		 *
+		 * workaround it this a tmp value.
+		 */
+		memcpy((void *)&tmp, prop->public_exponent, sizeof(uint64_t));
+		key.exponent = fdt64_to_cpu(tmp);
+	}
 
 	if (!key.len || !prop->modulus || !prop->rr) {
 		debug("%s: Missing RSA key info", __func__);
@@ -300,54 +314,3 @@ int rsa_mod_exp_sw(const uint8_t *sig, uint32_t sig_len,
 
 	return 0;
 }
-
-#if defined(CONFIG_CMD_ZYNQ_RSA)
-/**
- * zynq_pow_mod - in-place public exponentiation
- *
- * @keyptr:	RSA key
- * @inout:	Big-endian word array containing value and result
- * @return 0 on successful calculation, otherwise failure error code
- *
- * FIXME: Use pow_mod() instead of zynq_pow_mod()
- *        pow_mod calculation required for zynq is bit different from
- *        pw_mod above here, hence defined zynq specific routine.
- */
-int zynq_pow_mod(u32 *keyptr, u32 *inout)
-{
-	u32 *result, *ptr;
-	uint i;
-	struct rsa_public_key *key;
-	u32 val[RSA2048_BYTES], acc[RSA2048_BYTES], tmp[RSA2048_BYTES];
-
-	key = (struct rsa_public_key *)keyptr;
-
-	/* Sanity check for stack size - key->len is in 32-bit words */
-	if (key->len > RSA_MAX_KEY_BITS / 32) {
-		debug("RSA key words %u exceeds maximum %d\n", key->len,
-		      RSA_MAX_KEY_BITS / 32);
-		return -EINVAL;
-	}
-
-	result = tmp;  /* Re-use location. */
-
-	for (i = 0, ptr = inout; i < key->len; i++, ptr++)
-		val[i] = *(ptr);
-
-	montgomery_mul(key, acc, val, key->rr);  /* axx = a * RR / R mod M */
-	for (i = 0; i < 16; i += 2) {
-		montgomery_mul(key, tmp, acc, acc); /* tmp = acc^2 / R mod M */
-		montgomery_mul(key, acc, tmp, tmp); /* acc = tmp^2 / R mod M */
-	}
-	montgomery_mul(key, result, acc, val);  /* result = XX * a / R mod M */
-
-	/* Make sure result < mod; result is at most 1x mod too large. */
-	if (greater_equal_modulus(key, result))
-		subtract_modulus(key, result);
-
-	for (i = 0, ptr = inout; i < key->len; i++, ptr++)
-		*ptr = result[i];
-
-	return 0;
-}
-#endif

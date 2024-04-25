@@ -18,10 +18,9 @@
 #include <hexdump.h>
 #include <uuid.h>
 #include <stdarg.h>
-#include <linux/ctype.h>
-#include <linux/err.h>
 #include <linux/types.h>
 #include <linux/string.h>
+#include <linux/ctype.h>
 
 #define noinline __attribute__((noinline))
 
@@ -294,27 +293,6 @@ static char *string16(char *buf, char *end, u16 *s, int field_width,
 	return buf;
 }
 
-#if defined(CONFIG_EFI_LOADER) && \
-	!defined(CONFIG_SPL_BUILD) && !defined(API_BUILD)
-static char *device_path_string(char *buf, char *end, void *dp, int field_width,
-				int precision, int flags)
-{
-	u16 *str;
-
-	/* If dp == NULL output the string '<NULL>' */
-	if (!dp)
-		return string16(buf, end, dp, field_width, precision, flags);
-
-	str = efi_dp_str((struct efi_device_path *)dp);
-	if (!str)
-		return ERR_PTR(-ENOMEM);
-
-	buf = string16(buf, end, str, field_width, precision, flags);
-	efi_free_pool(str);
-	return buf;
-}
-#endif
-
 #ifdef CONFIG_CMD_NET
 static char *mac_address_string(char *buf, char *end, u8 *addr, int field_width,
 				int precision, int flags)
@@ -407,10 +385,7 @@ static char *uuid_string(char *buf, char *end, u8 *addr, int field_width,
 		break;
 	}
 
-	if (addr)
-		uuid_bin_to_str(addr, uuid, str_format);
-	else
-		strcpy(uuid, "<NULL>");
+	uuid_bin_to_str(addr, uuid, str_format);
 
 	return string(buf, end, uuid, field_width, precision, flags);
 }
@@ -450,12 +425,6 @@ static char *pointer(const char *fmt, char *buf, char *end, void *ptr,
 #endif
 
 	switch (*fmt) {
-#if defined(CONFIG_EFI_LOADER) && \
-	!defined(CONFIG_SPL_BUILD) && !defined(API_BUILD)
-	case 'D':
-		return device_path_string(buf, end, ptr, field_width,
-					  precision, flags);
-#endif
 #ifdef CONFIG_CMD_NET
 	case 'a':
 		flags |= SPECIAL | ZEROPAD;
@@ -625,8 +594,6 @@ repeat:
 			str = pointer(fmt + 1, str, end,
 					va_arg(args, void *),
 					field_width, precision, flags);
-			if (IS_ERR(str))
-				return PTR_ERR(str);
 			/* Skip all alphanumeric pointer suffixes */
 			while (isalnum(fmt[1]))
 				fmt++;
@@ -776,7 +743,6 @@ int sprintf(char *buf, const char *fmt, ...)
 	return i;
 }
 
-#if CONFIG_IS_ENABLED(PRINTF)
 int printf(const char *fmt, ...)
 {
 	va_list args;
@@ -792,9 +758,6 @@ int printf(const char *fmt, ...)
 	i = vscnprintf(printbuffer, sizeof(printbuffer), fmt, args);
 	va_end(args);
 
-	/* Handle error */
-	if (i <= 0)
-		return i;
 	/* Print the string */
 	puts(printbuffer);
 	return i;
@@ -811,14 +774,19 @@ int vprintf(const char *fmt, va_list args)
 	 */
 	i = vscnprintf(printbuffer, sizeof(printbuffer), fmt, args);
 
-	/* Handle error */
-	if (i <= 0)
-		return i;
 	/* Print the string */
 	puts(printbuffer);
 	return i;
 }
-#endif
+
+
+void __assert_fail(const char *assertion, const char *file, unsigned line,
+		   const char *function)
+{
+	/* This will not return */
+	panic("%s:%u: %s: Assertion `%s' failed.", file, line, function,
+	      assertion);
+}
 
 char *simple_itoa(ulong i)
 {

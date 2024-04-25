@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (c) 2011 The Chromium OS Authors.
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef USE_HOSTCC
@@ -11,7 +11,6 @@
 #include <errno.h>
 #include <fdtdec.h>
 #include <fdt_support.h>
-#include <inttypes.h>
 #include <linux/libfdt.h>
 #include <serial.h>
 #include <asm/sections.h>
@@ -49,6 +48,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
 	COMPAT(SAMSUNG_EXYNOS_MIPI_DSI, "samsung,exynos-mipi-dsi"),
 	COMPAT(SAMSUNG_EXYNOS_DWMMC, "samsung,exynos-dwmmc"),
 	COMPAT(SAMSUNG_EXYNOS_MMC, "samsung,exynos-mmc"),
+	COMPAT(MAXIM_MAX77686_PMIC, "maxim,max77686"),
 	COMPAT(GENERIC_SPI_FLASH, "spi-flash"),
 	COMPAT(MAXIM_98095_CODEC, "maxim,max98095-codec"),
 	COMPAT(SAMSUNG_EXYNOS5_I2C, "samsung,exynos5-hsi2c"),
@@ -71,9 +71,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
 	COMPAT(ALTERA_SOCFPGA_F2SDR0, "altr,socfpga-fpga2sdram0-bridge"),
 	COMPAT(ALTERA_SOCFPGA_F2SDR1, "altr,socfpga-fpga2sdram1-bridge"),
 	COMPAT(ALTERA_SOCFPGA_F2SDR2, "altr,socfpga-fpga2sdram2-bridge"),
-	COMPAT(ALTERA_SOCFPGA_FPGA0, "altr,socfpga-a10-fpga-mgr"),
-	COMPAT(ALTERA_SOCFPGA_NOC, "altr,socfpga-a10-noc"),
-	COMPAT(ALTERA_SOCFPGA_CLK_INIT, "altr,socfpga-a10-clk-init")
+	COMPAT(ROCKCHIP_NANDC, "rockchip,rk-nandc"),
 };
 
 const char *fdtdec_get_compatible(enum fdt_compat_id id)
@@ -84,9 +82,8 @@ const char *fdtdec_get_compatible(enum fdt_compat_id id)
 }
 
 fdt_addr_t fdtdec_get_addr_size_fixed(const void *blob, int node,
-				      const char *prop_name, int index, int na,
-				      int ns, fdt_size_t *sizep,
-				      bool translate)
+		const char *prop_name, int index, int na, int ns,
+		fdt_size_t *sizep, bool translate)
 {
 	const fdt32_t *prop, *prop_end;
 	const fdt32_t *prop_addr, *prop_size, *prop_after_size;
@@ -94,16 +91,6 @@ fdt_addr_t fdtdec_get_addr_size_fixed(const void *blob, int node,
 	fdt_addr_t addr;
 
 	debug("%s: %s: ", __func__, prop_name);
-
-	if (na > (sizeof(fdt_addr_t) / sizeof(fdt32_t))) {
-		debug("(na too large for fdt_addr_t type)\n");
-		return FDT_ADDR_T_NONE;
-	}
-
-	if (ns > (sizeof(fdt_size_t) / sizeof(fdt32_t))) {
-		debug("(ns too large for fdt_size_t type)\n");
-		return FDT_ADDR_T_NONE;
-	}
 
 	prop = fdt_getprop(blob, node, prop_name, &len);
 	if (!prop) {
@@ -140,9 +127,8 @@ fdt_addr_t fdtdec_get_addr_size_fixed(const void *blob, int node,
 }
 
 fdt_addr_t fdtdec_get_addr_size_auto_parent(const void *blob, int parent,
-					    int node, const char *prop_name,
-					    int index, fdt_size_t *sizep,
-					    bool translate)
+		int node, const char *prop_name, int index, fdt_size_t *sizep,
+		bool translate)
 {
 	int na, ns;
 
@@ -167,9 +153,8 @@ fdt_addr_t fdtdec_get_addr_size_auto_parent(const void *blob, int parent,
 }
 
 fdt_addr_t fdtdec_get_addr_size_auto_noparent(const void *blob, int node,
-					      const char *prop_name, int index,
-					      fdt_size_t *sizep,
-					      bool translate)
+		const char *prop_name, int index, fdt_size_t *sizep,
+		bool translate)
 {
 	int parent;
 
@@ -186,7 +171,7 @@ fdt_addr_t fdtdec_get_addr_size_auto_noparent(const void *blob, int node,
 }
 
 fdt_addr_t fdtdec_get_addr_size(const void *blob, int node,
-				const char *prop_name, fdt_size_t *sizep)
+		const char *prop_name, fdt_size_t *sizep)
 {
 	int ns = sizep ? (sizeof(fdt_size_t) / sizeof(fdt32_t)) : 0;
 
@@ -195,14 +180,15 @@ fdt_addr_t fdtdec_get_addr_size(const void *blob, int node,
 					  ns, sizep, false);
 }
 
-fdt_addr_t fdtdec_get_addr(const void *blob, int node, const char *prop_name)
+fdt_addr_t fdtdec_get_addr(const void *blob, int node,
+		const char *prop_name)
 {
 	return fdtdec_get_addr_size(blob, node, prop_name, NULL);
 }
 
-#if defined(CONFIG_PCI) && defined(CONFIG_DM_PCI)
+#if defined(CONFIG_PCI) && CONFIG_IS_ENABLED(DM_PCI)
 int fdtdec_get_pci_addr(const void *blob, int node, enum fdt_pci_space type,
-			const char *prop_name, struct fdt_pci_addr *addr)
+		const char *prop_name, struct fdt_pci_addr *addr)
 {
 	const u32 *cell;
 	int len;
@@ -234,10 +220,10 @@ int fdtdec_get_pci_addr(const void *blob, int node, enum fdt_pci_space type,
 				addr->phys_mid = fdt32_to_cpu(cell[1]);
 				addr->phys_lo = fdt32_to_cpu(cell[1]);
 				break;
+			} else {
+				cell += (FDT_PCI_ADDR_CELLS +
+					 FDT_PCI_SIZE_CELLS);
 			}
-
-			cell += (FDT_PCI_ADDR_CELLS +
-				 FDT_PCI_SIZE_CELLS);
 		}
 
 		if (i == num) {
@@ -246,9 +232,9 @@ int fdtdec_get_pci_addr(const void *blob, int node, enum fdt_pci_space type,
 		}
 
 		return 0;
+	} else {
+		ret = -EINVAL;
 	}
-
-	ret = -EINVAL;
 
 fail:
 	debug("(not found)\n");
@@ -266,9 +252,11 @@ int fdtdec_get_pci_vendev(const void *blob, int node, u16 *vendor, u16 *device)
 
 	end = list + len;
 	while (list < end) {
+		char *s;
+
 		len = strlen(list);
 		if (len >= strlen("pciVVVV,DDDD")) {
-			char *s = strstr(list, "pci");
+			s = strstr(list, "pci");
 
 			/*
 			 * check if the string is something like pciVVVV,DDDD.RR
@@ -298,7 +286,7 @@ int fdtdec_get_pci_bar32(struct udevice *dev, struct fdt_pci_addr *addr,
 
 	/* extract the bar number from fdt_pci_addr */
 	barnum = addr->phys_hi & 0xff;
-	if (barnum < PCI_BASE_ADDRESS_0 || barnum > PCI_CARDBUS_CIS)
+	if ((barnum < PCI_BASE_ADDRESS_0) || (barnum > PCI_CARDBUS_CIS))
 		return -EINVAL;
 
 	barnum = (barnum - PCI_BASE_ADDRESS_0) / 4;
@@ -309,7 +297,7 @@ int fdtdec_get_pci_bar32(struct udevice *dev, struct fdt_pci_addr *addr,
 #endif
 
 uint64_t fdtdec_get_uint64(const void *blob, int node, const char *prop_name,
-			   uint64_t default_val)
+		uint64_t default_val)
 {
 	const uint64_t *cell64;
 	int length;
@@ -334,7 +322,7 @@ int fdtdec_get_is_enabled(const void *blob, int node)
 	 */
 	cell = fdt_getprop(blob, node, "status", NULL);
 	if (cell)
-		return strcmp(cell, "okay") == 0;
+		return 0 == strcmp(cell, "okay");
 	return 1;
 }
 
@@ -344,19 +332,20 @@ enum fdt_compat_id fdtdec_lookup(const void *blob, int node)
 
 	/* Search our drivers */
 	for (id = COMPAT_UNKNOWN; id < COMPAT_COUNT; id++)
-		if (fdt_node_check_compatible(blob, node,
-					      compat_names[id]) == 0)
+		if (0 == fdt_node_check_compatible(blob, node,
+				compat_names[id]))
 			return id;
 	return COMPAT_UNKNOWN;
 }
 
-int fdtdec_next_compatible(const void *blob, int node, enum fdt_compat_id id)
+int fdtdec_next_compatible(const void *blob, int node,
+		enum fdt_compat_id id)
 {
 	return fdt_node_offset_by_compatible(blob, node, compat_names[id]);
 }
 
 int fdtdec_next_compatible_subnode(const void *blob, int node,
-				   enum fdt_compat_id id, int *depthp)
+		enum fdt_compat_id id, int *depthp)
 {
 	do {
 		node = fdt_next_node(blob, node, depthp);
@@ -370,8 +359,8 @@ int fdtdec_next_compatible_subnode(const void *blob, int node,
 	return -FDT_ERR_NOTFOUND;
 }
 
-int fdtdec_next_alias(const void *blob, const char *name, enum fdt_compat_id id,
-		      int *upto)
+int fdtdec_next_alias(const void *blob, const char *name,
+		enum fdt_compat_id id, int *upto)
 {
 #define MAX_STR_LEN 20
 	char str[MAX_STR_LEN + 20];
@@ -393,8 +382,7 @@ int fdtdec_next_alias(const void *blob, const char *name, enum fdt_compat_id id,
 }
 
 int fdtdec_find_aliases_for_id(const void *blob, const char *name,
-			       enum fdt_compat_id id, int *node_list,
-			       int maxcount)
+			enum fdt_compat_id id, int *node_list, int maxcount)
 {
 	memset(node_list, '\0', sizeof(*node_list) * maxcount);
 
@@ -403,8 +391,7 @@ int fdtdec_find_aliases_for_id(const void *blob, const char *name,
 
 /* TODO: Can we tighten this code up a little? */
 int fdtdec_add_aliases_for_id(const void *blob, const char *name,
-			      enum fdt_compat_id id, int *node_list,
-			      int maxcount)
+			enum fdt_compat_id id, int *node_list, int maxcount)
 {
 	int name_len = strlen(name);
 	int nodes[maxcount];
@@ -431,7 +418,7 @@ int fdtdec_add_aliases_for_id(const void *blob, const char *name,
 	}
 	if (node >= 0)
 		debug("%s: warning: maxcount exceeded with alias '%s'\n",
-		      __func__, name);
+		       __func__, name);
 
 	/* Now find all the aliases */
 	for (offset = fdt_first_property_offset(blob, alias_node);
@@ -454,7 +441,7 @@ int fdtdec_add_aliases_for_id(const void *blob, const char *name,
 		number = simple_strtoul(path + name_len, NULL, 10);
 		if (number < 0 || number >= maxcount) {
 			debug("%s: warning: alias '%s' is out of range\n",
-			      __func__, path);
+			       __func__, path);
 			continue;
 		}
 
@@ -500,7 +487,7 @@ int fdtdec_add_aliases_for_id(const void *blob, const char *name,
 		if (!node_list[i]) {
 			for (; j < maxcount; j++)
 				if (nodes[j] &&
-				    fdtdec_get_is_enabled(blob, nodes[j]))
+					fdtdec_get_is_enabled(blob, nodes[j]))
 					break;
 
 			/* Have we run out of nodes to add? */
@@ -643,8 +630,7 @@ int fdtdec_lookup_phandle(const void *blob, int node, const char *prop_name)
  * @return pointer to cell, which is only valid if err == 0
  */
 static const void *get_prop_check_min_len(const void *blob, int node,
-					  const char *prop_name, int min_len,
-					  int *err)
+		const char *prop_name, int min_len, int *err)
 {
 	const void *cell;
 	int len;
@@ -661,17 +647,15 @@ static const void *get_prop_check_min_len(const void *blob, int node,
 }
 
 int fdtdec_get_int_array(const void *blob, int node, const char *prop_name,
-			 u32 *array, int count)
+		u32 *array, int count)
 {
 	const u32 *cell;
-	int err = 0;
+	int i, err = 0;
 
 	debug("%s: %s\n", __func__, prop_name);
 	cell = get_prop_check_min_len(blob, node, prop_name,
 				      sizeof(u32) * count, &err);
 	if (!err) {
-		int i;
-
 		for (i = 0; i < count; i++)
 			array[i] = fdt32_to_cpu(cell[i]);
 	}
@@ -855,7 +839,7 @@ int fdtdec_get_child_count(const void *blob, int node)
 }
 
 int fdtdec_get_byte_array(const void *blob, int node, const char *prop_name,
-			  u8 *array, int count)
+		u8 *array, int count)
 {
 	const u8 *cell;
 	int err;
@@ -867,7 +851,7 @@ int fdtdec_get_byte_array(const void *blob, int node, const char *prop_name,
 }
 
 const u8 *fdtdec_locate_byte_array(const void *blob, int node,
-				   const char *prop_name, int count)
+			     const char *prop_name, int count)
 {
 	const u8 *cell;
 	int err;
@@ -879,7 +863,7 @@ const u8 *fdtdec_locate_byte_array(const void *blob, int node,
 }
 
 int fdtdec_get_config_int(const void *blob, const char *prop_name,
-			  int default_val)
+		int default_val)
 {
 	int config_node;
 
@@ -976,8 +960,7 @@ int fdt_get_resource(const void *fdt, int node, const char *property,
 
 	while (ptr + na + ns <= end) {
 		if (i == index) {
-			res->start = fdtdec_get_number(ptr, na);
-			res->end = res->start;
+			res->start = res->end = fdtdec_get_number(ptr, na);
 			res->end += fdtdec_get_number(&ptr[na], ns) - 1;
 			return 0;
 		}
@@ -1155,7 +1138,7 @@ int fdtdec_decode_display_timing(const void *blob, int parent, int index,
 	return ret;
 }
 
-int fdtdec_setup_mem_size_base(void)
+int fdtdec_setup_memory_size(void)
 {
 	int ret, mem;
 	struct fdt_resource res;
@@ -1173,7 +1156,6 @@ int fdtdec_setup_mem_size_base(void)
 	}
 
 	gd->ram_size = (phys_size_t)(res.end - res.start + 1);
-	gd->ram_base = (unsigned long)res.start;
 	debug("%s: Initial DRAM size %llx\n", __func__,
 	      (unsigned long long)gd->ram_size);
 
@@ -1181,25 +1163,13 @@ int fdtdec_setup_mem_size_base(void)
 }
 
 #if defined(CONFIG_NR_DRAM_BANKS)
-
-static int get_next_memory_node(const void *blob, int startoffset)
-{
-	int mem = -1;
-
-	do {
-		mem = fdt_node_offset_by_prop_value(gd->fdt_blob, mem,
-						    "device_type", "memory", 7);
-	} while (!fdtdec_get_is_enabled(blob, mem));
-
-	return mem;
-}
-
 int fdtdec_setup_memory_banksize(void)
 {
 	int bank, ret, mem, reg = 0;
 	struct fdt_resource res;
 
-	mem = get_next_memory_node(gd->fdt_blob, -1);
+	mem = fdt_node_offset_by_prop_value(gd->fdt_blob, -1, "device_type",
+					    "memory", 7);
 	if (mem < 0) {
 		debug("%s: Missing /memory node\n", __func__);
 		return -EINVAL;
@@ -1209,7 +1179,9 @@ int fdtdec_setup_memory_banksize(void)
 		ret = fdt_get_resource(gd->fdt_blob, mem, "reg", reg++, &res);
 		if (ret == -FDT_ERR_NOTFOUND) {
 			reg = 0;
-			mem = get_next_memory_node(gd->fdt_blob, mem);
+			mem = fdt_node_offset_by_prop_value(gd->fdt_blob, mem,
+							    "device_type",
+							    "memory", 7);
 			if (mem == -FDT_ERR_NOTFOUND)
 				break;
 
@@ -1289,28 +1261,6 @@ static int uncompress_blob(const void *src, ulong sz_src, void **dstp)
 # endif
 #endif
 
-#if defined(CONFIG_OF_BOARD) || defined(CONFIG_OF_SEPARATE)
-/*
- * For CONFIG_OF_SEPARATE, the board may optionally implement this to
- * provide and/or fixup the fdt.
- */
-__weak void *board_fdt_blob_setup(void)
-{
-	void *fdt_blob = NULL;
-#ifdef CONFIG_SPL_BUILD
-	/* FDT is at end of BSS unless it is in a different memory region */
-	if (IS_ENABLED(CONFIG_SPL_SEPARATE_BSS))
-		fdt_blob = (ulong *)&_image_binary_end;
-	else
-		fdt_blob = (ulong *)&__bss_end;
-#else
-	/* FDT is at end of image */
-	fdt_blob = (ulong *)&_end;
-#endif
-	return fdt_blob;
-}
-#endif
-
 int fdtdec_setup(void)
 {
 #if CONFIG_IS_ENABLED(OF_CONTROL)
@@ -1324,7 +1274,25 @@ int fdtdec_setup(void)
 #  else
 	gd->fdt_blob = __dtb_dt_begin;
 #  endif
-# elif defined(CONFIG_OF_BOARD) || defined(CONFIG_OF_SEPARATE)
+# elif defined CONFIG_OF_SEPARATE
+#  ifdef CONFIG_SPL_BUILD
+	/* FDT is at end of BSS unless it is in a different memory region */
+	if (IS_ENABLED(CONFIG_SPL_SEPARATE_BSS))
+		gd->fdt_blob = (ulong *)&_image_binary_end;
+	else
+		gd->fdt_blob = (ulong *)&__bss_end;
+#  else
+	/* FDT is at end of image */
+	gd->fdt_blob = (ulong *)&_end;
+
+#    ifdef CONFIG_USING_KERNEL_DTB
+	gd->fdt_blob_kern = (ulong *)ALIGN((ulong)gd->fdt_blob +
+				fdt_totalsize(gd->fdt_blob), 8);
+	if (fdt_check_header(gd->fdt_blob_kern))
+		gd->fdt_blob_kern = NULL;
+#    endif
+#  endif
+# elif defined(CONFIG_OF_BOARD)
 	/* Allow the board to override the fdt address. */
 	gd->fdt_blob = board_fdt_blob_setup();
 # elif defined(CONFIG_OF_HOSTFILE)
@@ -1365,113 +1333,5 @@ int fdtdec_setup(void)
 
 	return fdtdec_prepare_fdt();
 }
-
-#ifdef CONFIG_NR_DRAM_BANKS
-int fdtdec_decode_ram_size(const void *blob, const char *area, int board_id,
-			   phys_addr_t *basep, phys_size_t *sizep, bd_t *bd)
-{
-	int addr_cells, size_cells;
-	const u32 *cell, *end;
-	u64 total_size, size, addr;
-	int node, child;
-	bool auto_size;
-	int bank;
-	int len;
-
-	debug("%s: board_id=%d\n", __func__, board_id);
-	if (!area)
-		area = "/memory";
-	node = fdt_path_offset(blob, area);
-	if (node < 0) {
-		debug("No %s node found\n", area);
-		return -ENOENT;
-	}
-
-	cell = fdt_getprop(blob, node, "reg", &len);
-	if (!cell) {
-		debug("No reg property found\n");
-		return -ENOENT;
-	}
-
-	addr_cells = fdt_address_cells(blob, node);
-	size_cells = fdt_size_cells(blob, node);
-
-	/* Check the board id and mask */
-	for (child = fdt_first_subnode(blob, node);
-	     child >= 0;
-	     child = fdt_next_subnode(blob, child)) {
-		int match_mask, match_value;
-
-		match_mask = fdtdec_get_int(blob, child, "match-mask", -1);
-		match_value = fdtdec_get_int(blob, child, "match-value", -1);
-
-		if (match_value >= 0 &&
-		    ((board_id & match_mask) == match_value)) {
-			/* Found matching mask */
-			debug("Found matching mask %d\n", match_mask);
-			node = child;
-			cell = fdt_getprop(blob, node, "reg", &len);
-			if (!cell) {
-				debug("No memory-banks property found\n");
-				return -EINVAL;
-			}
-			break;
-		}
-	}
-	/* Note: if no matching subnode was found we use the parent node */
-
-	if (bd) {
-		memset(bd->bi_dram, '\0', sizeof(bd->bi_dram[0]) *
-						CONFIG_NR_DRAM_BANKS);
-	}
-
-	auto_size = fdtdec_get_bool(blob, node, "auto-size");
-
-	total_size = 0;
-	end = cell + len / 4 - addr_cells - size_cells;
-	debug("cell at %p, end %p\n", cell, end);
-	for (bank = 0; bank < CONFIG_NR_DRAM_BANKS; bank++) {
-		if (cell > end)
-			break;
-		addr = 0;
-		if (addr_cells == 2)
-			addr += (u64)fdt32_to_cpu(*cell++) << 32UL;
-		addr += fdt32_to_cpu(*cell++);
-		if (bd)
-			bd->bi_dram[bank].start = addr;
-		if (basep && !bank)
-			*basep = (phys_addr_t)addr;
-
-		size = 0;
-		if (size_cells == 2)
-			size += (u64)fdt32_to_cpu(*cell++) << 32UL;
-		size += fdt32_to_cpu(*cell++);
-
-		if (auto_size) {
-			u64 new_size;
-
-			debug("Auto-sizing %" PRIx64 ", size %" PRIx64 ": ",
-			      addr, size);
-			new_size = get_ram_size((long *)(uintptr_t)addr, size);
-			if (new_size == size) {
-				debug("OK\n");
-			} else {
-				debug("sized to %" PRIx64 "\n", new_size);
-				size = new_size;
-			}
-		}
-
-		if (bd)
-			bd->bi_dram[bank].size = size;
-		total_size += size;
-	}
-
-	debug("Memory size %" PRIu64 "\n", total_size);
-	if (sizep)
-		*sizep = (phys_size_t)total_size;
-
-	return 0;
-}
-#endif /* CONFIG_NR_DRAM_BANKS */
 
 #endif /* !USE_HOSTCC */

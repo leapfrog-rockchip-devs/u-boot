@@ -1,6 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (c) 2015 Google, Inc
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  *
  * EFI information obtained here:
  * http://wiki.phoenix.com/wiki/index.php/EFI_BOOT_SERVICES
@@ -10,13 +11,11 @@
 
 #include <common.h>
 #include <debug_uart.h>
-#include <dm.h>
 #include <errno.h>
 #include <linux/err.h>
 #include <linux/types.h>
 #include <efi.h>
 #include <efi_api.h>
-#include <sysreset.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -98,8 +97,7 @@ static void free_memory(struct efi_priv *priv)
  * U-Boot. If it returns, EFI will continue. Another way to get back to EFI
  * is via reset_cpu().
  */
-efi_status_t EFIAPI efi_main(efi_handle_t image,
-			     struct efi_system_table *sys_table)
+efi_status_t efi_main(efi_handle_t image, struct efi_system_table *sys_table)
 {
 	struct efi_priv local_priv, *priv = &local_priv;
 	efi_status_t ret;
@@ -131,7 +129,7 @@ efi_status_t EFIAPI efi_main(efi_handle_t image,
 	return EFI_SUCCESS;
 }
 
-static void efi_exit(void)
+void reset_cpu(ulong addr)
 {
 	struct efi_priv *priv = global_priv;
 
@@ -139,27 +137,3 @@ static void efi_exit(void)
 	printf("U-Boot EFI exiting\n");
 	priv->boot->exit(priv->parent_image, EFI_SUCCESS, 0, NULL);
 }
-
-static int efi_sysreset_request(struct udevice *dev, enum sysreset_t type)
-{
-	efi_exit();
-
-	return -EINPROGRESS;
-}
-
-static const struct udevice_id efi_sysreset_ids[] = {
-	{ .compatible = "efi,reset" },
-	{ }
-};
-
-static struct sysreset_ops efi_sysreset_ops = {
-	.request = efi_sysreset_request,
-};
-
-U_BOOT_DRIVER(efi_sysreset) = {
-	.name = "efi-sysreset",
-	.id = UCLASS_SYSRESET,
-	.of_match = efi_sysreset_ids,
-	.ops = &efi_sysreset_ops,
-	.flags = DM_FLAG_PRE_RELOC,
-};
