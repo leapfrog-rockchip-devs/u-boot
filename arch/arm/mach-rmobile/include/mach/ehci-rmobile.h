@@ -1,7 +1,8 @@
-/* SPDX-License-Identifier: GPL-2.0 */
 /*
  *  Copyright (C) 2013,2014 Renesas Electronics Corporation
  *  Copyright (C) 2014 Nobuhiro Iwamatsu <nobuhiro.iwamatsu.yj@renesas.com>
+ *
+ *  SPDX-License-Identifier:     GPL-2.0
  */
 
 #ifndef __EHCI_RMOBILE_H__

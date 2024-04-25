@@ -1,7 +1,8 @@
-/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * (C) Copyright 2002
  * Daniel Engström, Omicron Ceti AB, daniel@omicron.se
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __ASM_PROCESSOR_H_
@@ -42,6 +43,11 @@ enum {
 	RST_CPU		= 1 << 2,	/* initiate reset */
 	FULL_RST	= 1 << 3,	/* full power cycle */
 };
+
+/**
+ * x86_full_reset() - reset everything: perform a full power cycle
+ */
+void x86_full_reset(void);
 
 static inline __attribute__((always_inline)) void cpu_hlt(void)
 {

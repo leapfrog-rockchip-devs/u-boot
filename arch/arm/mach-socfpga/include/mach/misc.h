@@ -1,6 +1,7 @@
-/* SPDX-License-Identifier: GPL-2.0 */
 /*
  * Copyright (C) 2016-2017 Intel Corporation
+ *
+ * SPDX-License-Identifier:    GPL-2.0
  */
 
 #ifndef _MISC_H_
@@ -26,7 +27,5 @@ unsigned int dedicated_uart_com_port(const void *blob);
 unsigned int shared_uart_com_port(const void *blob);
 unsigned int uart_com_port(const void *blob);
 #endif
-
-void do_bridge_reset(int enable);
 
 #endif /* _MISC_H_ */

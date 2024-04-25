@@ -8,6 +8,7 @@
 	model = "sandbox";
 
 	aliases {
+		eth5 = "/eth@90000000";
 		i2c0 = &i2c_0;
 		pci0 = &pci;
 		rtc0 = &rtc_0;
@@ -46,15 +47,22 @@
 		};
 	};
 
-	ethrawbus {
-		compatible = "sandbox,eth-raw-bus";
-		skip-localhost = <0>;
-	};
-
 	eth@10002000 {
 		compatible = "sandbox,eth";
 		reg = <0x10002000 0x1000>;
 		fake-host-hwaddr = [00 00 66 44 22 00];
+	};
+
+	eth@80000000 {
+		compatible = "sandbox,eth-raw";
+		reg = <0x80000000 0x1000>;
+		host-raw-interface = "eth0";
+	};
+
+	eth@90000000 {
+		compatible = "sandbox,eth-raw";
+		reg = <0x90000000 0x1000>;
+		host-raw-interface = "lo";
 	};
 
 	gpio_a: gpios@0 {
@@ -62,7 +70,7 @@
 		compatible = "sandbox,gpio";
 		#gpio-cells = <1>;
 		gpio-bank-name = "a";
-		sandbox,gpio-count = <20>;
+		num-gpios = <20>;
 	};
 
 	gpio_b: gpios@1 {
@@ -70,7 +78,7 @@
 		compatible = "sandbox,gpio";
 		#gpio-cells = <2>;
 		gpio-bank-name = "b";
-		sandbox,gpio-count = <10>;
+		num-gpios = <10>;
 	};
 
 	hexagon {
@@ -106,10 +114,6 @@
 		};
 		sandbox_pmic: sandbox_pmic {
 			reg = <0x40>;
-		};
-
-		mc34708: pmic@41 {
-			reg = <0x41>;
 		};
 	};
 
@@ -232,10 +236,6 @@
 
 	tpm {
 		compatible = "google,sandbox-tpm";
-	};
-
-	tpm2 {
-		compatible = "sandbox,tpm2";
 	};
 
 	triangle {

@@ -1,6 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  *  Copyright (C) 2013-2017 Altera Corporation <www.altera.com>
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -20,7 +21,7 @@ void cm_wait_for_lock(u32 mask)
 	do {
 #if defined(CONFIG_TARGET_SOCFPGA_GEN5)
 		inter_val = readl(&clock_manager_base->inter) & mask;
-#else
+#elif defined(CONFIG_TARGET_SOCFPGA_ARRIA10)
 		inter_val = readl(&clock_manager_base->stat) & mask;
 #endif
 		/* Wait for stable lock */
@@ -51,15 +52,14 @@ int set_cpu_clk_info(void)
 
 #if defined(CONFIG_TARGET_SOCFPGA_GEN5)
 	gd->bd->bi_ddr_freq = cm_get_sdram_clk_hz() / 1000000;
-#else
+#elif defined(CONFIG_TARGET_SOCFPGA_ARRIA10)
 	gd->bd->bi_ddr_freq = 0;
 #endif
 
 	return 0;
 }
 
-#ifndef CONFIG_SPL_BUILD
-static int do_showclocks(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+int do_showclocks(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	cm_print_clock_quick_summary();
 	return 0;
@@ -70,4 +70,3 @@ U_BOOT_CMD(
 	"display clocks",
 	""
 );
-#endif

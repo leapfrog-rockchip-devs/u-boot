@@ -21,6 +21,20 @@
  * on the stack during an exception.
  */
 struct pt_regs {
+	/*
+	 * system register
+	 *
+	 * Note: never change order! see "_exception_entry" and "exception_exit"
+	 */
+	unsigned long ttbr0;
+	unsigned long hcr;	/* hcr_el2/scr_el3 */
+	unsigned long sctlr;
+	unsigned long sp;
+	unsigned long spsr;
+	unsigned long vbar;
+	unsigned long daif;
+	unsigned long esr;
+
 	unsigned long elr;
 	unsigned long regs[31];
 };
@@ -37,7 +51,6 @@ struct pt_regs {
 #define FIQ_MODE	0x11
 #define IRQ_MODE	0x12
 #define SVC_MODE	0x13
-#define MON_MODE	0x16
 #define ABT_MODE	0x17
 #define HYP_MODE	0x1a
 #define UND_MODE	0x1b

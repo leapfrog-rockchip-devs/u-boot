@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2014 DENX Software Engineering
  *     Heiko Schocher <hs@denx.de>
@@ -6,6 +5,8 @@
  * Based on:
  * Copyright (C) 2013 Atmel Corporation
  *		      Bo Shen <voice.shen@atmel.com>
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -76,9 +77,7 @@ void __weak spl_board_init(void)
 void board_init_f(ulong dummy)
 {
 	lowlevel_clock_init();
-#if !defined(CONFIG_AT91SAM9_WATCHDOG)
 	at91_disable_wdt();
-#endif
 
 	/*
 	 * At this stage the main oscillator is supposed to be enabled

@@ -44,8 +44,6 @@ static inline void __set_bit(int nr, void *addr)
 	*a |= mask;
 }
 
-#define PLATFORM__SET_BIT
-
 extern void clear_bit(int nr, void *addr);
 
 static inline void __clear_bit(int nr, void *addr)
@@ -60,8 +58,6 @@ static inline void __clear_bit(int nr, void *addr)
 	*a &= ~mask;
 	local_irq_restore(flags);
 }
-
-#define PLATFORM__CLEAR_BIT
 
 extern void change_bit(int nr, void *addr);
 

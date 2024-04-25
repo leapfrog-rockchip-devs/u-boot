@@ -91,7 +91,6 @@
 	 * the whole bus hierarchy.
 	 */
 	ocp {
-		u-boot,dm-spl;
 		compatible = "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;

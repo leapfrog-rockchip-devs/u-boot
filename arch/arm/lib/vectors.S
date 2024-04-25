@@ -1,4 +1,3 @@
-/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  *  vectors - Generic ARM exception table code
  *
@@ -10,6 +9,8 @@
  *  Copyright (c) 2002	Alex Züpke <azu@sysgo.de>
  *  Copyright (c) 2002	Gary Jennejohn <garyj@denx.de>
  *  Copyright (c) 2002	Kyle Harris <kharris@nexus-tech.net>
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <config.h>
@@ -133,7 +134,7 @@ not_used:
 irq:
 fiq:
 1:
-	b	1b			/* hang and never return */
+	bl	1b			/* hang and never return */
 
 #else	/* !CONFIG_SPL_BUILD */
 
@@ -143,6 +144,13 @@ IRQ_STACK_START_IN:
 #ifdef IRAM_BASE_ADDR
 	.word   IRAM_BASE_ADDR + 0x20
 #else
+	.word	0x0badc0de
+#endif
+
+#if CONFIG_IS_ENABLED(IRQ)
+/* IRQ stack memory (calculated at run-time) */
+.globl IRQ_STACK_START
+IRQ_STACK_START:
 	.word	0x0badc0de
 #endif
 
@@ -171,6 +179,7 @@ IRQ_STACK_START_IN:
 #define S_R1		4
 #define S_R0		0
 
+#define MODE_IRQ 0x12
 #define MODE_SVC 0x13
 #define I_BIT	 0x80
 
@@ -198,7 +207,15 @@ IRQ_STACK_START_IN:
 	stmia	sp, {r0 - r12}			@ Calling r0-r12
 	@ !!!! R8 NEEDS to be saved !!!! a reserved stack spot would be good.
 	add	r8, sp, #S_PC
-	stmdb	r8, {sp, lr}^		@ Calling SP, LR
+
+	cps	#MODE_SVC	@ SVC-Mode
+	isb
+	mov	r1, sp		@ svc_sp
+	mov	r2, lr		@ svc_lr
+	cps	#MODE_IRQ	@ IRQ-Mode
+	isb
+
+	stmdb	r8, {r1, r2}^		@ Calling svc_sp, svc_lr
 	str	lr, [r8, #0]		@ Save calling PC
 	mrs	r6, spsr
 	str	r6, [r8, #4]		@ Save CPSR
@@ -272,9 +289,16 @@ not_used:
 
 	.align	5
 irq:
+#if CONFIG_IS_ENABLED(IRQ)
+	get_irq_stack
+	irq_save_user_regs
+	bl	do_irq
+	irq_restore_user_regs
+#else
 	get_bad_stack
 	bad_save_user_regs
 	bl	do_irq
+#endif
 
 	.align	5
 fiq:

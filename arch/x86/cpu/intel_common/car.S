@@ -1,4 +1,3 @@
-/* SPDX-License-Identifier: GPL-2.0 */
 /*
  * Copyright (c) 2014 Google, Inc
  *
@@ -8,6 +7,8 @@
  * Copyright (C) 2005 Tyan (written by Yinghai Lu for Tyan)
  * Copyright (C) 2007-2008 coresystems GmbH
  * Copyright (C) 2012 Kyösti Mälkki <kyosti.malkki@gmail.com>
+ *
+ * SPDX-License-Identifier:	GPL-2.0
  */
 
 #include <common.h>
@@ -239,6 +240,4 @@ _dt_ucode_base_size:
 .globl ucode_base
 ucode_base:	/* Declared in microcode.h */
 	.long	0			/* microcode base */
-.globl ucode_size
-ucode_size:	/* Declared in microcode.h */
 	.long	0			/* microcode size */

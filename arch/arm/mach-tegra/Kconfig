@@ -22,8 +22,6 @@ config TEGRA_IVC
 
 config TEGRA_COMMON
 	bool "Tegra common options"
-	select BINMAN
-	select BOARD_EARLY_INIT_F
 	select CLK
 	select DM
 	select DM_ETH
@@ -37,10 +35,10 @@ config TEGRA_COMMON
 	select DM_SPI
 	select DM_SPI_FLASH
 	select MISC
-	select OF_CONTROL
 	select SPI
+	select OF_CONTROL
 	select VIDCONSOLE_AS_LCD if DM_VIDEO
-	imply CMD_DM
+	select BOARD_EARLY_INIT_F
 	imply CRC32_VERIFY
 
 config TEGRA_NO_BPMP
@@ -51,7 +49,7 @@ config TEGRA_NO_BPMP
 
 config TEGRA_ARMV7_COMMON
 	bool "Tegra 32-bit common options"
-	select CPU_V7A
+	select CPU_V7
 	select SPL
 	select SPL_BOARD_INIT if SPL
 	select SUPPORT_SPL
@@ -62,13 +60,7 @@ config TEGRA_ARMV7_COMMON
 config TEGRA_ARMV8_COMMON
 	bool "Tegra 64-bit common options"
 	select ARM64
-	select LINUX_KERNEL_IMAGE_HEADER
 	select TEGRA_COMMON
-
-if TEGRA_ARMV8_COMMON
-config LNX_KRNL_IMG_TEXT_OFFSET_BASE
-	default 0x80000000
-endif
 
 choice
 	prompt "Tegra SoC select"
@@ -99,8 +91,8 @@ config TEGRA124
 
 config TEGRA210
 	bool "Tegra210 family"
-	select TEGRA_ARMV8_COMMON
 	select TEGRA_GPIO
+	select TEGRA_ARMV8_COMMON
 	select TEGRA_NO_BPMP
 
 config TEGRA186

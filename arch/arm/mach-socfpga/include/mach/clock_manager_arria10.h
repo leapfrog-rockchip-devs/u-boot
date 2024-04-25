@@ -1,6 +1,7 @@
-/* SPDX-License-Identifier: GPL-2.0 */
 /*
  * Copyright (C) 2016-2017 Intel Corporation
+ *
+ * SPDX-License-Identifier:	GPL-2.0
  */
 
 #ifndef CLOCK_MANAGER_ARRIA10
@@ -107,7 +108,7 @@ unsigned int cm_get_spi_controller_clk_hz(void);
 
 #define CLKMGR_ALTERAGRP_MPU_CLK_OFFSET			0x140
 #define CLKMGR_MAINPLL_NOC_CLK_OFFSET			0x144
-#define LOCKED_MASK	(CLKMGR_CLKMGR_STAT_MAINPLLLOCKED_SET_MSK | \
+#define LOCKED_MASK	(CLKMGR_CLKMGR_STAT_MAINPLLLOCKED_SET_MSK  | \
 			 CLKMGR_CLKMGR_STAT_PERPLLLOCKED_SET_MSK)
 
 /* value */

@@ -10,7 +10,6 @@
 #ifndef __DTS_IMX53_PINFUNC_H
 #define __DTS_IMX53_PINFUNC_H
 
-#define IMX_PAD_SION       0x40000000
 /*
  * The pin function ID is a tuple of
  * <mux_reg conf_reg input_reg mux_mode input_val>

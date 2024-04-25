@@ -22,12 +22,6 @@ choice
 
 config TARGET_AM3517_EVM
 	bool "AM3517 EVM"
-	select DM
-	select DM_GPIO
-	select DM_I2C
-	select DM_MMC
-	select DM_SERIAL
-	imply CMD_DM
 
 config TARGET_MT_VENTOUX
 	bool "TeeJet Mt.Ventoux"
@@ -37,11 +31,10 @@ config TARGET_MT_VENTOUX
 config TARGET_OMAP3_BEAGLE
 	bool "TI OMAP3 BeagleBoard"
 	select DM
-	select DM_GPIO
 	select DM_SERIAL
+	select DM_GPIO
 	select OMAP3_GPIO_5
 	select OMAP3_GPIO_6
-	imply CMD_DM
 
 config TARGET_CM_T35
 	bool "CompuLab CM-T3530 and CM-T3730 boards"
@@ -58,46 +51,37 @@ config TARGET_CM_T3517
 config TARGET_DEVKIT8000
 	bool "TimLL OMAP3 Devkit8000"
 	select DM
-	select DM_GPIO
 	select DM_SERIAL
-	imply CMD_DM
+	select DM_GPIO
 
 config TARGET_OMAP3_EVM
 	bool "TI OMAP3 EVM"
-	select DM
-	select DM_GPIO
-	select DM_SERIAL
-	select OMAP3_GPIO_3
-	imply CMD_DM
 
 config TARGET_OMAP3_IGEP00X0
 	bool "IGEP"
 	select DM
-	select DM_GPIO
 	select DM_SERIAL
+	select DM_GPIO
 	select OMAP3_GPIO_3
 	select OMAP3_GPIO_5
 	select OMAP3_GPIO_6
-	imply CMD_DM
 
 config TARGET_OMAP3_OVERO
 	bool "OMAP35xx Gumstix Overo"
 	select DM
-	select DM_GPIO
 	select DM_SERIAL
+	select DM_GPIO
 	select OMAP3_GPIO_2
 	select OMAP3_GPIO_3
 	select OMAP3_GPIO_4
 	select OMAP3_GPIO_5
 	select OMAP3_GPIO_6
-	imply CMD_DM
 
 config TARGET_OMAP3_ZOOM1
 	bool "TI Zoom1"
 	select DM
-	select DM_GPIO
 	select DM_SERIAL
-	imply CMD_DM
+	select DM_GPIO
 
 config TARGET_AM3517_CRANE
 	bool "am3517_crane"
@@ -125,12 +109,10 @@ config TARGET_OMAP3_LOGIC
 	bool "OMAP3 Logic"
 	select BOARD_LATE_INIT
 	select DM
-	select DM_GPIO
 	select DM_SERIAL
-	select OMAP3_GPIO_3
+	select DM_GPIO
 	select OMAP3_GPIO_4
 	select OMAP3_GPIO_6
-	imply CMD_DM
 
 config TARGET_NOKIA_RX51
 	bool "Nokia RX51"
@@ -151,37 +133,20 @@ config TARGET_TWISTER
 config TARGET_OMAP3_CAIRO
 	bool "QUIPOS CAIRO"
 	select DM
-	select DM_GPIO
 	select DM_SERIAL
-	imply CMD_DM
+	select DM_GPIO
 
 config TARGET_SNIPER
 	bool "LG Optimus Black"
 	select DM
-	select DM_GPIO
 	select DM_SERIAL
+	select DM_GPIO
 	select OMAP3_GPIO_2
 	select OMAP3_GPIO_3
 	select OMAP3_GPIO_4
 	select OMAP3_GPIO_5
 	select OMAP3_GPIO_6
-	imply CMD_DM
 
-endchoice
-
-choice
-	prompt "Memory Controller"
-	default SDRC
-
-config SDRC
-	bool "SDRC controller"
-	help
-	  The default memory controller on most OMAP3 boards is SDRC.
-
-config EMIF4
-	bool "EMIF4 controller"
-	help
-	  Enable this on boards like AM3517 which use EMIF4 controller
 endchoice
 
 config SPL_OMAP3_ID_NAND

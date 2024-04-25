@@ -44,8 +44,8 @@ config ARMV8_SPIN_TABLE
 menu "ARMv8 secure monitor firmware"
 config ARMV8_SEC_FIRMWARE_SUPPORT
 	bool "Enable ARMv8 secure monitor firmware framework support"
-	select FIT
 	select OF_LIBFDT
+	select FIT
 	help
 	  This framework is aimed at making secure monitor firmware load
 	  process brief.
@@ -60,8 +60,8 @@ config ARMV8_SEC_FIRMWARE_SUPPORT
 
 config SPL_ARMV8_SEC_FIRMWARE_SUPPORT
 	bool "Enable ARMv8 secure monitor firmware framework support for SPL"
-	select SPL_FIT
 	select SPL_OF_LIBFDT
+	select SPL_FIT
 	help
 	  Say Y here to support this framework in SPL phase.
 
@@ -85,13 +85,10 @@ endmenu
 config PSCI_RESET
 	bool "Use PSCI for reset and shutdown"
 	default y
-	depends on !ARCH_EXYNOS7 && !ARCH_BCM283X && \
+	depends on !ARCH_EXYNOS7 && !ARCH_BCM283X && !TARGET_LS2080A_EMU && \
 		   !TARGET_LS2080A_SIMU && !TARGET_LS2080AQDS && \
-		   !TARGET_LS2080ARDB && !TARGET_LS2080A_EMU && \
-		   !TARGET_LS1088ARDB && !TARGET_LS1088AQDS && \
+		   !TARGET_LS2080ARDB && !TARGET_LS1012AQDS && \
 		   !TARGET_LS1012ARDB && !TARGET_LS1012AFRDM && \
-		   !TARGET_LS1012A2G5RDB && !TARGET_LS1012AQDS && \
-		   !TARGET_LS1012AFRWY && \
 		   !TARGET_LS1043ARDB && !TARGET_LS1043AQDS && \
 		   !TARGET_LS1046ARDB && !TARGET_LS1046AQDS && \
 		   !TARGET_LS2081ARDB && \

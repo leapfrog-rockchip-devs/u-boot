@@ -1,6 +1,7 @@
-/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright (c) 2015 Google, Inc
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __ASM_ARCH_MICROCODE_H
@@ -10,7 +11,6 @@
 
 /* This is a declaration for ucode_base in start.S */
 extern u32 ucode_base;
-extern u32 ucode_size;
 
 /**
  * microcode_update_intel() - Apply microcode updates

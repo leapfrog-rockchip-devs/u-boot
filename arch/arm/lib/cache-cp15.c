@@ -1,20 +1,19 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2002
  * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
 #include <asm/system.h>
 #include <asm/cache.h>
 #include <linux/compiler.h>
-#include <asm/armv7_mpu.h>
 
 #if !(defined(CONFIG_SYS_ICACHE_OFF) && defined(CONFIG_SYS_DCACHE_OFF))
 
 DECLARE_GLOBAL_DATA_PTR;
 
-#ifdef CONFIG_SYS_ARM_MMU
 __weak void arm_init_before_mmu(void)
 {
 }
@@ -108,12 +107,30 @@ __weak void dram_bank_mmu_setup(int bank)
 /* to activate the MMU we need to set up virtual memory: use 1M areas */
 static inline void mmu_setup(void)
 {
-	int i;
+	int i, end;
 	u32 reg;
 
+#ifndef CONFIG_SPL_BUILD
+	/* bootrom and ddr didn't initial dcache,
+	 * skip this to save boot time.
+	 */
 	arm_init_before_mmu();
+#endif
+
+	/*
+	 * SPL thunder-boot:
+	 * only map periph device region to save boot time.
+	 */
+#if defined(CONFIG_SPL_BUILD) && defined(CONFIG_SPL_KERNEL_BOOT) && \
+    defined(CONFIG_PERIPH_DEVICE_START_ADDR)
+	i = CONFIG_PERIPH_DEVICE_START_ADDR >> MMU_SECTION_SHIFT;
+	end = CONFIG_PERIPH_DEVICE_END_ADDR >> MMU_SECTION_SHIFT;
+#else
+	i = 0;
+	end = (4096ULL * 1024 * 1024) >> MMU_SECTION_SHIFT;
+#endif
 	/* Set up an identity-mapping for all 4GB, rw for everyone */
-	for (i = 0; i < ((4096ULL * 1024 * 1024) >> MMU_SECTION_SHIFT); i++)
+	for (; i < end; i++)
 		set_section_dcache(i, DCACHE_OFF);
 
 	for (i = 0; i < CONFIG_NR_DRAM_BANKS; i++) {
@@ -162,7 +179,7 @@ static inline void mmu_setup(void)
 		asm volatile("mcr p15, 0, %0, c10, c2, 0"
 			: : "r" (MEMORY_ATTRIBUTES) : "memory");
 	}
-#elif defined(CONFIG_CPU_V7A)
+#elif defined(CONFIG_CPU_V7)
 	if (is_hyp()) {
 		/* Set HTCR to disable LPAE */
 		asm volatile("mcr p15, 4, %0, c2, c0, 2"
@@ -203,23 +220,15 @@ static int mmu_enabled(void)
 {
 	return get_cr() & CR_M;
 }
-#endif /* CONFIG_SYS_ARM_MMU */
 
 /* cache_bit must be either CR_I or CR_C */
 static void cache_enable(uint32_t cache_bit)
 {
 	uint32_t reg;
 
-	/* The data cache is not active unless the mmu/mpu is enabled too */
-#ifdef CONFIG_SYS_ARM_MMU
+	/* The data cache is not active unless the mmu is enabled too */
 	if ((cache_bit == CR_C) && !mmu_enabled())
 		mmu_setup();
-#elif defined(CONFIG_SYS_ARM_MPU)
-	if ((cache_bit == CR_C) && !mpu_enabled()) {
-		printf("Consider enabling MPU before enabling caches\n");
-		return;
-	}
-#endif
 	reg = get_cr();	/* get control reg. */
 	set_cr(reg | cache_bit);
 }

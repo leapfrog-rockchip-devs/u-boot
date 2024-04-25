@@ -1,6 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (C) 2016-2017 Intel Corporation
+ *
+ * SPDX-License-Identifier:    GPL-2.0
  */
 
 #include <altera.h>
@@ -14,7 +15,6 @@
 #include <asm/arch/misc.h>
 #include <asm/arch/pinmux.h>
 #include <asm/arch/reset_manager.h>
-#include <asm/arch/reset_manager_arria10.h>
 #include <asm/arch/sdram_arria10.h>
 #include <asm/arch/system_manager.h>
 #include <asm/arch/nic301.h>
@@ -27,6 +27,8 @@
 #define PINMUX_UART1_TX_SHARED_IO_OFFSET_Q1_7	0x18
 #define PINMUX_UART1_TX_SHARED_IO_OFFSET_Q3_7	0x78
 #define PINMUX_UART1_TX_SHARED_IO_OFFSET_Q4_3	0x98
+
+DECLARE_GLOBAL_DATA_PTR;
 
 #if defined(CONFIG_SPL_BUILD)
 static struct pl310_regs *const pl310 =
@@ -42,7 +44,8 @@ static struct socfpga_system_manager *sysmgr_regs =
  * DesignWare Ethernet initialization
  */
 #ifdef CONFIG_ETH_DESIGNWARE
-static void arria10_dwmac_reset(const u8 of_reset_id, const u8 phymode)
+void dwmac_deassert_reset(const unsigned int of_reset_id,
+				 const u32 phymode)
 {
 	u32 reset;
 
@@ -64,20 +67,6 @@ static void arria10_dwmac_reset(const u8 of_reset_id, const u8 phymode)
 	/* Release the EMAC controller from reset */
 	socfpga_per_reset(reset, 0);
 }
-
-static int socfpga_eth_reset(void)
-{
-	/* Put all GMACs into RESET state. */
-	socfpga_per_reset(SOCFPGA_RESET(EMAC0), 1);
-	socfpga_per_reset(SOCFPGA_RESET(EMAC1), 1);
-	socfpga_per_reset(SOCFPGA_RESET(EMAC2), 1);
-	return socfpga_eth_reset_common(arria10_dwmac_reset);
-};
-#else
-static int socfpga_eth_reset(void)
-{
-	return 0;
-};
 #endif
 
 #if defined(CONFIG_SPL_BUILD)
@@ -93,19 +82,6 @@ static void initialize_security_policies(void)
 	/* Put OCRAM in non-secure */
 	writel(0x003f0000, &noc_fw_ocram_base->region0);
 	writel(0x1, &noc_fw_ocram_base->enable);
-
-	/* Put DDR in non-secure */
-	writel(0xffff0000, SOCFPGA_SDR_FIREWALL_L3_ADDRESS + 0xc);
-	writel(0x1, SOCFPGA_SDR_FIREWALL_L3_ADDRESS);
-
-	/* Enable priviledged and non-priviledged access to L4 peripherals */
-	writel(~0, SOCFPGA_NOC_L4_PRIV_FLT_OFST);
-
-	/* Enable secure and non-secure transactions to bridges */
-	writel(~0, SOCFPGA_NOC_FW_H2F_SCR_OFST);
-	writel(~0, SOCFPGA_NOC_FW_H2F_SCR_OFST + 4);
-
-	writel(0x0007FFFF, &sysmgr_regs->ecc_intmask_set);
 }
 
 int arch_early_init_r(void)
@@ -118,6 +94,11 @@ int arch_early_init_r(void)
 	/* assert reset to all except L4WD0 and L4TIMER0 */
 	socfpga_per_reset_all();
 
+	/* configuring the clock based on handoff */
+	/* TODO: Add call to cm_basic_init() */
+
+	/* Add device descriptor to FPGA device table */
+	socfpga_fpga_add();
 	return 0;
 }
 #else
@@ -273,14 +254,6 @@ int print_cpuinfo(void)
 #ifdef CONFIG_ARCH_MISC_INIT
 int arch_misc_init(void)
 {
-	return socfpga_eth_reset();
+	return 0;
 }
 #endif
-
-void do_bridge_reset(int enable)
-{
-	if (enable)
-		socfpga_reset_deassert_bridges_handoff();
-	else
-		socfpga_bridges_reset();
-}

@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (c) 2011 The Chromium OS Authors.
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 #define DEBUG
 #include <common.h>
@@ -9,7 +9,6 @@
 #include <linux/libfdt.h>
 #include <os.h>
 #include <asm/io.h>
-#include <asm/setjmp.h>
 #include <asm/state.h>
 #include <dm/root.h>
 
@@ -57,16 +56,6 @@ int cleanup_before_linux_select(int flags)
 	return 0;
 }
 
-void *phys_to_virt(phys_addr_t paddr)
-{
-	return (void *)(gd->arch.ram_buf + paddr);
-}
-
-phys_addr_t virt_to_phys(void *vaddr)
-{
-	return (phys_addr_t)((uint8_t *)vaddr - gd->arch.ram_buf);
-}
-
 void *map_physmem(phys_addr_t paddr, unsigned long len, unsigned long flags)
 {
 #if defined(CONFIG_PCI) && !defined(CONFIG_SPL_BUILD)
@@ -77,14 +66,14 @@ void *map_physmem(phys_addr_t paddr, unsigned long len, unsigned long flags)
 	if (enable_pci_map && !pci_map_physmem(paddr, &len, &map_dev, &ptr)) {
 		if (plen != len) {
 			printf("%s: Warning: partial map at %x, wanted %lx, got %lx\n",
-			       __func__, (uint)paddr, len, plen);
+			       __func__, paddr, len, plen);
 		}
 		map_len = len;
 		return ptr;
 	}
 #endif
 
-	return phys_to_virt(paddr);
+	return (void *)(gd->arch.ram_buf + paddr);
 }
 
 void unmap_physmem(const void *vaddr, unsigned long flags)
@@ -164,16 +153,4 @@ ulong timer_get_boot_us(void)
 		base_count = count;
 
 	return (count - base_count) / 1000;
-}
-
-int setjmp(jmp_buf jmp)
-{
-	return os_setjmp((ulong *)jmp, sizeof(*jmp));
-}
-
-void longjmp(jmp_buf jmp, int ret)
-{
-	os_longjmp((ulong *)jmp, ret);
-	while (1)
-		;
 }

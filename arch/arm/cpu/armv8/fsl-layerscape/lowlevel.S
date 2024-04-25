@@ -1,6 +1,7 @@
-/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * (C) Copyright 2014-2015 Freescale Semiconductor
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  *
  * Extracted from armv8/start.S
  */
@@ -74,7 +75,7 @@ ENTRY(lowlevel_init)
 	switch_el x1, 1f, 100f, 100f	/* skip if not in EL3 */
 1:
 
-#if defined (CONFIG_SYS_FSL_HAS_CCN504)
+#ifdef CONFIG_FSL_LSCH3
 
 	/* Set Wuo bit for RN-I 20 */
 #ifdef CONFIG_ARCH_LS2080A
@@ -169,7 +170,7 @@ ENTRY(lowlevel_init)
 	ldr	x0, =CCI_S2_QOS_CONTROL_BASE(20)
 	ldr	x1, =0x00FF000C
 	bl	ccn504_set_qos
-#endif /* CONFIG_SYS_FSL_HAS_CCN504 */
+#endif
 
 #ifdef SMMU_BASE
 	/* Set the SMMU page size in the sACR register */
@@ -233,45 +234,39 @@ ENTRY(lowlevel_init)
 	 * NOTE: As per the CCSR map doc, TZASC 3 and TZASC 4 are just
 	 * 	 placeholders.
 	 */
-
-.macro tzasc_prog, xreg
-
-	mov     x12, TZASC1_BASE
-	mov     x16, #0x10000
-	mul     x14, \xreg, x16
-	add     x14, x14,x12
-	mov 	x1, #0x8
-	add     x1, x1, x14
-
-	ldr     w0, [x1]		/* Filter 0 Gate Keeper Register */
-	orr     w0, w0, #1 << 0		/* Set open_request for Filter 0 */
-	str     w0, [x1]
-
-	mov	x1, #0x110
-	add     x1, x1, x14
-
-	ldr     w0, [x1]		/* Region-0 Attributes Register */
-	orr     w0, w0, #1 << 31	/* Set Sec global write en, Bit[31] */
-	orr     w0, w0, #1 << 30	/* Set Sec global read en, Bit[30] */
-	str     w0, [x1]
-
-	mov	x1, #0x114
-	add     x1, x1, x14
-
-	ldr     w0, [x1]		/* Region-0 Access Register */
-	mov     w0, #0xFFFFFFFF		/* Set nsaid_wr_en and nsaid_rd_en */
-	str     w0, [x1]
-.endm
-
 #ifdef CONFIG_FSL_TZASC_1
-	mov     x13, #0
-	tzasc_prog	x13
+	ldr	x1, =TZASC_GATE_KEEPER(0)
+	ldr	w0, [x1]		/* Filter 0 Gate Keeper Register */
+	orr	w0, w0, #1 << 0		/* Set open_request for Filter 0 */
+	str	w0, [x1]
 
+	ldr	x1, =TZASC_REGION_ATTRIBUTES_0(0)
+	ldr	w0, [x1]		/* Region-0 Attributes Register */
+	orr	w0, w0, #1 << 31	/* Set Sec global write en, Bit[31] */
+	orr	w0, w0, #1 << 30	/* Set Sec global read en, Bit[30] */
+	str	w0, [x1]
+
+	ldr	x1, =TZASC_REGION_ID_ACCESS_0(0)
+	ldr	w0, [x1]		/* Region-0 Access Register */
+	mov	w0, #0xFFFFFFFF		/* Set nsaid_wr_en and nsaid_rd_en */
+	str	w0, [x1]
 #endif
 #ifdef CONFIG_FSL_TZASC_2
-	mov     x13, #1
-	tzasc_prog	x13
+	ldr	x1, =TZASC_GATE_KEEPER(1)
+	ldr	w0, [x1]		/* Filter 0 Gate Keeper Register */
+	orr	w0, w0, #1 << 0		/* Set open_request for Filter 0 */
+	str	w0, [x1]
 
+	ldr	x1, =TZASC_REGION_ATTRIBUTES_0(1)
+	ldr	w0, [x1]		/* Region-1 Attributes Register */
+	orr	w0, w0, #1 << 31	/* Set Sec global write en, Bit[31] */
+	orr	w0, w0, #1 << 30	/* Set Sec global read en, Bit[30] */
+	str	w0, [x1]
+
+	ldr	x1, =TZASC_REGION_ID_ACCESS_0(1)
+	ldr	w0, [x1]		/* Region-1 Attributes Register */
+	mov	w0, #0xFFFFFFFF		/* Set nsaid_wr_en and nsaid_rd_en */
+	str	w0, [x1]
 #endif
 	isb
 	dsb	sy
@@ -342,9 +337,7 @@ get_svr:
 	ldr	x1, =FSL_LSCH3_SVR
 	ldr	w0, [x1]
 	ret
-#endif
 
-#ifdef CONFIG_SYS_FSL_HAS_CCN504
 hnf_pstate_poll:
 	/* x0 has the desired status, return 0 for success, 1 for timeout
 	 * clobber x1, x2, x3, x4, x6, x7
@@ -400,6 +393,9 @@ ENTRY(__asm_flush_l3_dcache)
 	mov	x29, lr
 	mov	x8, #0
 
+	switch_el x0, 1f, 100f, 100f	/* skip if not in EL3 */
+
+1:
 	dsb	sy
 	mov	x0, #0x1		/* HNFPSTAT_SFONLY */
 	bl	hnf_set_pstate
@@ -417,12 +413,13 @@ ENTRY(__asm_flush_l3_dcache)
 	bl	hnf_pstate_poll
 	cbz	x0, 1f
 	add	x8, x8, #0x2
+100:
 1:
 	mov	x0, x8
 	mov	lr, x29
 	ret
 ENDPROC(__asm_flush_l3_dcache)
-#endif /* CONFIG_SYS_FSL_HAS_CCN504 */
+#endif
 
 #ifdef CONFIG_MP
 	/* Keep literals not used by the secondary boot code outside it */

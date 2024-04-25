@@ -1,17 +1,17 @@
 /*
- * Copyright (C) 2016 ARM Ltd.
+ * Copyright (c) 2016 ARM Ltd.
  *
  * This file is dual-licensed: you can use it either under the terms
  * of the GPL or the X11 license, at your option. Note that this dual
  * licensing only applies to this file, and not this project as a
  * whole.
  *
- *  a) This file is free software; you can redistribute it and/or
+ *  a) This library is free software; you can redistribute it and/or
  *     modify it under the terms of the GNU General Public License as
  *     published by the Free Software Foundation; either version 2 of the
  *     License, or (at your option) any later version.
  *
- *     This file is distributed in the hope that it will be useful,
+ *     This library is distributed in the hope that it will be useful,
  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *     GNU General Public License for more details.
@@ -40,38 +40,24 @@
  *     OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <sunxi-h3-h5.dtsi>
+#include "sun8i-h3.dtsi"
 
 / {
 	cpus {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		cpu0: cpu@0 {
+		cpu@0 {
 			compatible = "arm,cortex-a53", "arm,armv8";
-			device_type = "cpu";
-			reg = <0>;
 			enable-method = "psci";
 		};
-
 		cpu@1 {
 			compatible = "arm,cortex-a53", "arm,armv8";
-			device_type = "cpu";
-			reg = <1>;
 			enable-method = "psci";
 		};
-
 		cpu@2 {
 			compatible = "arm,cortex-a53", "arm,armv8";
-			device_type = "cpu";
-			reg = <2>;
 			enable-method = "psci";
 		};
-
 		cpu@3 {
 			compatible = "arm,cortex-a53", "arm,armv8";
-			device_type = "cpu";
-			reg = <3>;
 			enable-method = "psci";
 		};
 	};
@@ -83,49 +69,9 @@
 
 	timer {
 		compatible = "arm,armv8-timer";
-		interrupts = <GIC_PPI 13
-				(GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
-			     <GIC_PPI 14
-				(GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
-			     <GIC_PPI 11
-				(GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
-			     <GIC_PPI 10
-				(GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>;
 	};
 };
 
-&ccu {
-	compatible = "allwinner,sun50i-h5-ccu";
-};
-
-&display_clocks {
-	compatible = "allwinner,sun50i-h5-de2-clk";
-};
-
-&mmc0 {
-	compatible = "allwinner,sun50i-h5-mmc",
-		     "allwinner,sun50i-a64-mmc";
-	clocks = <&ccu CLK_BUS_MMC0>, <&ccu CLK_MMC0>;
-	clock-names = "ahb", "mmc";
-};
-
-&mmc1 {
-	compatible = "allwinner,sun50i-h5-mmc",
-		     "allwinner,sun50i-a64-mmc";
-	clocks = <&ccu CLK_BUS_MMC1>, <&ccu CLK_MMC1>;
-	clock-names = "ahb", "mmc";
-};
-
-&mmc2 {
-	compatible = "allwinner,sun50i-h5-emmc",
-		     "allwinner,sun50i-a64-emmc";
-	clocks = <&ccu CLK_BUS_MMC2>, <&ccu CLK_MMC2>;
-	clock-names = "ahb", "mmc";
-};
-
-&pio {
-	interrupts = <GIC_SPI 11 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 17 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 23 IRQ_TYPE_LEVEL_HIGH>;
-	compatible = "allwinner,sun50i-h5-pinctrl";
+&gic {
+	compatible = "arm,gic-400";
 };

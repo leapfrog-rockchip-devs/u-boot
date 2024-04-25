@@ -1,4 +1,6 @@
-# SPDX-License-Identifier: GPL-2.0+
+#
+# SPDX-License-Identifier:	GPL-2.0+
+#
 
 obj-$(CONFIG_AT91_WANTS_COMMON_PHY) += phy.o
 ifneq ($(CONFIG_SPL_BUILD),)
@@ -16,4 +18,4 @@ endif
 obj-y += clock.o
 obj-$(CONFIG_CPU_ARM920T)	+= arm920t/
 obj-$(CONFIG_CPU_ARM926EJS)	+= arm926ejs/
-obj-$(CONFIG_CPU_V7A)		+= armv7/
+obj-$(CONFIG_CPU_V7)		+= armv7/

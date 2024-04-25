@@ -1,12 +1,13 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2016 Beniamino Galvani <b.galvani@gmail.com>
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  *
  * Secure monitor calls.
  */
 
 #include <common.h>
-#include <asm/arch/gx.h>
+#include <asm/arch/gxbb.h>
 #include <linux/kernel.h>
 
 #define FN_GET_SHARE_MEM_INPUT_BASE	0x82000020

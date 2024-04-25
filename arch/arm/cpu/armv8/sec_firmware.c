@@ -1,6 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright 2016 NXP Semiconductor, Inc.
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -29,7 +30,7 @@ phys_addr_t sec_firmware_addr;
 #define SEC_FIRMWARE_FIT_IMAGE		"firmware"
 #endif
 #ifndef SEC_FIRMEWARE_FIT_CNF_NAME
-#define SEC_FIRMEWARE_FIT_CNF_NAME	"config-1"
+#define SEC_FIRMEWARE_FIT_CNF_NAME	"config@1"
 #endif
 #ifndef SEC_FIRMWARE_TARGET_EL
 #define SEC_FIRMWARE_TARGET_EL		2
@@ -104,105 +105,6 @@ static int sec_firmware_parse_image(const void *sec_firmware_img,
 	return 0;
 }
 
-/*
- * SEC Firmware FIT image parser to check if any loadable is
- * present. If present, verify integrity of the loadable and
- * copy loadable to address provided in (loadable_h, loadable_l).
- *
- * Returns 0 on success and a negative errno on error task fail.
- */
-static int sec_firmware_check_copy_loadable(const void *sec_firmware_img,
-					    u32 *loadable_l, u32 *loadable_h)
-{
-	phys_addr_t sec_firmware_loadable_addr = 0;
-	int conf_node_off, ld_node_off, images;
-	char *conf_node_name = NULL;
-	const void *data;
-	size_t size;
-	ulong load;
-	const char *name, *str, *type;
-	int len;
-
-	conf_node_name = SEC_FIRMEWARE_FIT_CNF_NAME;
-
-	conf_node_off = fit_conf_get_node(sec_firmware_img, conf_node_name);
-	if (conf_node_off < 0) {
-		printf("SEC Firmware: %s: no such config\n", conf_node_name);
-		return -ENOENT;
-	}
-
-	/* find the node holding the images information */
-	images = fdt_path_offset(sec_firmware_img, FIT_IMAGES_PATH);
-	if (images < 0) {
-		printf("%s: Cannot find /images node: %d\n", __func__, images);
-		return -1;
-	}
-
-	type = FIT_LOADABLE_PROP;
-
-	name = fdt_getprop(sec_firmware_img, conf_node_off, type, &len);
-	if (!name) {
-		/* Loadables not present */
-		return 0;
-	}
-
-	printf("SEC Firmware: '%s' present in config\n", type);
-
-	for (str = name; str && ((str - name) < len);
-	     str = strchr(str, '\0') + 1) {
-		printf("%s: '%s'\n", type, str);
-		ld_node_off = fdt_subnode_offset(sec_firmware_img, images, str);
-		if (ld_node_off < 0) {
-			printf("cannot find image node '%s': %d\n", str,
-			       ld_node_off);
-			return -EINVAL;
-		}
-
-		/* Verify secure firmware image */
-		if (!(fit_image_verify(sec_firmware_img, ld_node_off))) {
-			printf("SEC Loadable: Bad loadable image (bad CRC)\n");
-			return -EINVAL;
-		}
-
-		if (fit_image_get_data(sec_firmware_img, ld_node_off,
-				       &data, &size)) {
-			printf("SEC Loadable: Can't get subimage data/size");
-			return -ENOENT;
-		}
-
-		/* Get load address, treated as load offset to secure memory */
-		if (fit_image_get_load(sec_firmware_img, ld_node_off, &load)) {
-			printf("SEC Loadable: Can't get subimage load");
-			return -ENOENT;
-		}
-
-		/* Compute load address for loadable in secure memory */
-		sec_firmware_loadable_addr = (sec_firmware_addr -
-						gd->arch.tlb_size) + load;
-
-		/* Copy loadable to secure memory and flush dcache */
-		debug("%s copied to address 0x%p\n",
-		      FIT_LOADABLE_PROP, (void *)sec_firmware_loadable_addr);
-		memcpy((void *)sec_firmware_loadable_addr, data, size);
-		flush_dcache_range(sec_firmware_loadable_addr,
-				   sec_firmware_loadable_addr + size);
-
-		/* Populate loadable address only for Trusted OS */
-		if (!strcmp(str, "trustedOS@1")) {
-			/*
-			 * Populate address ptrs for loadable image with
-			 * loadbale addr
-			 */
-			out_le32(loadable_l, (sec_firmware_loadable_addr &
-					      WORD_MASK));
-			out_le32(loadable_h, (sec_firmware_loadable_addr >>
-					      WORD_SHIFT));
-		}
-	}
-
-	return 0;
-}
-
 static int sec_firmware_copy_image(const char *title,
 			 u64 image_addr, u32 image_size, u64 sec_firmware)
 {
@@ -215,11 +117,9 @@ static int sec_firmware_copy_image(const char *title,
 
 /*
  * This function will parse the SEC Firmware image, and then load it
- * to secure memory. Also load any loadable if present along with SEC
- * Firmware image.
+ * to secure memory.
  */
-static int sec_firmware_load_image(const void *sec_firmware_img,
-				   u32 *loadable_l, u32 *loadable_h)
+static int sec_firmware_load_image(const void *sec_firmware_img)
 {
 	const void *raw_image_addr;
 	size_t raw_image_size = 0;
@@ -269,15 +169,6 @@ static int sec_firmware_load_image(const void *sec_firmware_img,
 	ret = sec_firmware_copy_image("SEC Firmware", (u64)raw_image_addr,
 			raw_image_size, sec_firmware_addr &
 			SEC_FIRMWARE_ADDR_MASK);
-	if (ret)
-		goto out;
-
-	/*
-	 * Check if any loadable are present along with firmware image, if
-	 * present load them.
-	 */
-	ret = sec_firmware_check_copy_loadable(sec_firmware_img, loadable_l,
-					       loadable_h);
 	if (ret)
 		goto out;
 
@@ -348,7 +239,9 @@ unsigned int sec_firmware_support_psci_version(void)
  */
 bool sec_firmware_support_hwrng(void)
 {
+	uint8_t rand[8];
 	if (sec_firmware_addr & SEC_FIRMWARE_RUNNING) {
+		if (!sec_firmware_get_random(rand, 8))
 			return true;
 	}
 
@@ -396,22 +289,17 @@ int sec_firmware_get_random(uint8_t *rand, int bytes)
  * @sec_firmware_img:	the SEC Firmware image address
  * @eret_hold_l:	the address to hold exception return address low
  * @eret_hold_h:	the address to hold exception return address high
- * @loadable_l:		the address to hold loadable address low
- * @loadable_h:		the address to hold loadable address high
  */
 int sec_firmware_init(const void *sec_firmware_img,
 			u32 *eret_hold_l,
-			u32 *eret_hold_h,
-			u32 *loadable_l,
-			u32 *loadable_h)
+			u32 *eret_hold_h)
 {
 	int ret;
 
 	if (!sec_firmware_is_valid(sec_firmware_img))
 		return -EINVAL;
 
-	ret = sec_firmware_load_image(sec_firmware_img, loadable_l,
-				      loadable_h);
+	ret = sec_firmware_load_image(sec_firmware_img);
 	if (ret) {
 		printf("SEC Firmware: Failed to load image\n");
 		return ret;
@@ -457,10 +345,8 @@ int fdt_fixup_kaslr(void *fdt)
 
 #if defined(CONFIG_ARMV8_SEC_FIRMWARE_SUPPORT)
 	/* Check if random seed generation is  supported */
-	if (sec_firmware_support_hwrng() == false) {
-		printf("WARNING: SEC firmware not running, no kaslr-seed\n");
+	if (sec_firmware_support_hwrng() == false)
 		return 0;
-	}
 
 	ret = sec_firmware_get_random(rand, 8);
 	if (ret < 0) {
