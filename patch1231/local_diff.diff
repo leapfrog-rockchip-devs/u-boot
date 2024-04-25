@@ -1,0 +1,20 @@
+diff --git a/configs/px30_defconfig b/configs/px30_defconfig
+index edd77f754a..4632563808 100644
+--- a/configs/px30_defconfig
++++ b/configs/px30_defconfig
+@@ -144,4 +144,5 @@ CONFIG_AVB_LIBAVB_USER=y
+ CONFIG_RK_AVB_LIBAVB_USER=y
+ CONFIG_OPTEE_CLIENT=y
+ CONFIG_OPTEE_V2=y
++CONFIG_OPTEE_ALWAYS_USE_SECURITY_PARTITION=y
+ CONFIG_TEST_ROCKCHIP=y
+diff --git a/configs/rk3326_defconfig b/configs/rk3326_defconfig
+index d39a4a582c..7bd04775c0 100644
+--- a/configs/rk3326_defconfig
++++ b/configs/rk3326_defconfig
+@@ -137,4 +137,5 @@ CONFIG_AVB_LIBAVB_USER=y
+ CONFIG_RK_AVB_LIBAVB_USER=y
+ CONFIG_OPTEE_CLIENT=y
+ CONFIG_OPTEE_V2=y
++CONFIG_OPTEE_ALWAYS_USE_SECURITY_PARTITION=y
+ CONFIG_TEST_ROCKCHIP=y

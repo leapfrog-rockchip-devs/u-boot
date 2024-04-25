@@ -1,0 +1,28 @@
+remote url:
+rk	ssh://git@10.10.10.78:2222/Android_Qt/rk/u-boot (fetch)
+rk	ssh://git@10.10.10.78:2222/Android_Qt/rk/u-boot (push)
+remote branch:
+  m/master -> android-10.0-mid-rkr14
+  rk/next-dev
+commit 3cddfea5e2bad01db7feb2dff13789319adfbd28
+Author: zhijun.xie <xzj@rock-chips.com>
+Date:   Wed Aug 4 17:53:35 2021 +0800
+
+    configs: Add rk3568-spi-nand(-pmic).config
+    
+    These two files are mainly for generating the uboot.img as small as possible,
+    in order to run on the spi-nand board with critial capacity(128MB now).
+    
+    And the preloader is Miniloader for the small size too. Therefore we have to
+    use the legacy image format: uboot.img and trust.img.
+    
+    Update rk3568-spi-nand(-pmic).config according to .config:
+      ./scripts/sync-fragment.sh configs/rk3568-spi-nand-pmic.config
+      ./scripts/sync-fragment.sh configs/rk3568-spi-nand.config
+    
+    The commands to reduce uboot size to 815K for spi nand product:
+      ./make.sh rk3568-spi-nand --sz-uboot 1024 2 --sz-trust 512 2 for not pmu product  or
+      ./make.sh rk3568-spi-nand-pmic --sz-uboot 1024 2 --sz-trust 512 2 for pmu product
+    
+    Signed-off-by: zhijun.xie <xzj@rock-chips.com>
+    Change-Id: Ib4923a00dc4a97909d1000a1b5b6023a7e5b3681
