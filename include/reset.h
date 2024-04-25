@@ -1,6 +1,7 @@
-/* SPDX-License-Identifier: GPL-2.0 */
 /*
  * Copyright (c) 2016, NVIDIA CORPORATION.
+ *
+ * SPDX-License-Identifier: GPL-2.0
  */
 
 #ifndef _RESET_H
@@ -77,7 +78,7 @@ struct reset_ctl_bulk {
 	unsigned int count;
 };
 
-#if CONFIG_IS_ENABLED(DM_RESET)
+#ifdef CONFIG_DM_RESET
 /**
  * reset_get_by_index - Get/request a reset signal by integer index.
  *

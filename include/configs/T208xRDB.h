@@ -1,6 +1,7 @@
-/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright 2014 Freescale Semiconductor, Inc.
+ *
+ * SPDX-License-Identifier:     GPL-2.0+
  */
 
 /*
@@ -15,6 +16,7 @@
 
 /* High Level Configuration Options */
 #define CONFIG_SYS_BOOK3E_HV	/* Category E.HV supported */
+#define CONFIG_MP		/* support multiple processors */
 #define CONFIG_ENABLE_36BIT_PHYS
 
 #ifdef CONFIG_PHYS_64BIT
@@ -30,6 +32,8 @@
 #define CONFIG_SYS_FSL_PBL_PBI board/freescale/t208xrdb/t2080_pbi.cfg
 
 #define CONFIG_SPL_FLUSH_IMAGE
+#define CONFIG_SPL_TARGET		"u-boot-with-spl.bin"
+#define CONFIG_SYS_TEXT_BASE		0x00201000
 #define CONFIG_SPL_TEXT_BASE		0xFFFD8000
 #define CONFIG_SPL_PAD_TO		0x40000
 #define CONFIG_SPL_MAX_SIZE		0x28000
@@ -68,6 +72,7 @@
 
 #ifdef CONFIG_SDCARD
 #define        CONFIG_RESET_VECTOR_ADDRESS             0x200FFC
+#define CONFIG_SPL_MMC_MINIMAL
 #define CONFIG_SYS_MMC_U_BOOT_SIZE     (768 << 10)
 #define CONFIG_SYS_MMC_U_BOOT_DST      (0x00200000)
 #define CONFIG_SYS_MMC_U_BOOT_START    (0x00200000)
@@ -91,6 +96,10 @@
 #define CONFIG_RESET_VECTOR_ADDRESS 0xfffffffc
 #endif
 
+#ifndef CONFIG_SYS_TEXT_BASE
+#define CONFIG_SYS_TEXT_BASE	0xeff40000
+#endif
+
 #ifndef CONFIG_RESET_VECTOR_ADDRESS
 #define CONFIG_RESET_VECTOR_ADDRESS	0xeffffffc
 #endif
@@ -108,6 +117,7 @@
 
 #define CONFIG_SYS_MEMTEST_START	0x00200000 /* memtest works on */
 #define CONFIG_SYS_MEMTEST_END		0x00400000
+#define CONFIG_SYS_ALT_MEMTEST
 
 #ifdef CONFIG_MTD_NOR_FLASH
 #define CONFIG_FLASH_CFI_DRIVER
@@ -164,6 +174,7 @@ unsigned long get_board_ddr_clk(void);
 #define CONFIG_SPL_RELOC_MALLOC_ADDR	(CONFIG_SPL_GD_ADDR + 12 * 1024)
 #define CONFIG_SPL_RELOC_MALLOC_SIZE	(50 << 10)
 #define CONFIG_SPL_RELOC_STACK		(CONFIG_SPL_GD_ADDR + 64 * 1024)
+#define CONFIG_SPL_RELOC_STACK_SIZE	(22 << 10)
 
 #define CONFIG_SYS_DCSRBAR	0xf0000000
 #define CONFIG_SYS_DCSRBAR_PHYS	0xf00000000ull
@@ -338,6 +349,7 @@ unsigned long get_board_ddr_clk(void);
 #define CONFIG_SYS_MONITOR_BASE  CONFIG_SYS_TEXT_BASE /* start of monitor */
 #endif
 
+#define CONFIG_BOARD_EARLY_INIT_R	/* call board_early_init_r function */
 #define CONFIG_MISC_INIT_R
 #define CONFIG_HWCONFIG
 
@@ -361,6 +373,7 @@ unsigned long get_board_ddr_clk(void);
 /*
  * Serial Port
  */
+#define CONFIG_CONS_INDEX		1
 #define CONFIG_SYS_NS16550_SERIAL
 #define CONFIG_SYS_NS16550_REG_SIZE	1
 #define CONFIG_SYS_NS16550_CLK		(get_bus_freq(0)/2)
@@ -509,6 +522,7 @@ unsigned long get_board_ddr_clk(void);
 
 /* Qman/Bman */
 #ifndef CONFIG_NOBQFMAN
+#define CONFIG_SYS_DPAA_QBMAN		/* Support Q/Bman */
 #define CONFIG_SYS_BMAN_NUM_PORTALS	18
 #define CONFIG_SYS_BMAN_MEM_BASE	0xf4000000
 #define CONFIG_SYS_BMAN_MEM_PHYS	0xff4000000ull
@@ -614,6 +628,8 @@ unsigned long get_board_ddr_clk(void);
  * SATA
  */
 #ifdef CONFIG_FSL_SATA_V2
+#define CONFIG_LIBATA
+#define CONFIG_FSL_SATA
 #define CONFIG_SYS_SATA_MAX_DEVICE	2
 #define CONFIG_SATA1
 #define CONFIG_SYS_SATA1		CONFIG_SYS_MPC85xx_SATA1_ADDR
@@ -637,6 +653,7 @@ unsigned long get_board_ddr_clk(void);
  * SDHC
  */
 #ifdef CONFIG_MMC
+#define CONFIG_FSL_ESDHC
 #define CONFIG_SYS_FSL_ESDHC_ADDR	CONFIG_SYS_MPC85xx_ESDHC_ADDR
 #define CONFIG_SYS_FSL_ESDHC_BROKEN_TIMEOUT
 #define CONFIG_SYS_FSL_MMC_HAS_CAPBLT_VS33
@@ -647,6 +664,12 @@ unsigned long get_board_ddr_clk(void);
  */
 #ifdef CONFIG_MTD_NOR_FLASH
 #define CONFIG_FLASH_CFI_MTD
+#define MTDIDS_DEFAULT "nor0=fe8000000.nor,nand0=fff800000.flash," \
+			"spi0=spife110000.1"
+#define MTDPARTS_DEFAULT "mtdparts=fe8000000.nor:1m(uboot),5m(kernel)," \
+			"128k(dtb),96m(fs),-(user);fff800000.flash:1m(uboot)," \
+			"5m(kernel),128k(dtb),96m(fs),-(user);spife110000.1:" \
+			"1m(uboot),5m(kernel),128k(dtb),-(user)"
 #endif
 
 /*
@@ -656,6 +679,9 @@ unsigned long get_board_ddr_clk(void);
 /*
  * Miscellaneous configurable options
  */
+#define CONFIG_SYS_LONGHELP		/* undef to save memory */
+#define CONFIG_CMDLINE_EDITING		/* Command-line editing */
+#define CONFIG_AUTO_COMPLETE		/* add autocompletion support */
 #define CONFIG_SYS_LOAD_ADDR	0x2000000 /* default load address */
 
 /*

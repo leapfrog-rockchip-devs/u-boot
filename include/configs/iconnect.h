@@ -1,8 +1,9 @@
-/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * (C) Copyright 2009-2012
  * Wojciech Dubowik <wojciech.dubowik@neratec.com>
  * Luka Perkov <luka@openwrt.org>
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef _CONFIG_ICONNECT_H
@@ -54,10 +55,16 @@
 	"ubifsload 0x800000 ${kernel}; "				\
 	"bootm 0x800000"
 
+#define CONFIG_MTDPARTS \
+	"mtdparts=orion_nand:"		\
+	"0x80000@0x0(uboot),"		\
+	"0x20000@0x80000(uboot_env),"	\
+	"-@0xa0000(rootfs)\0"
+
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"console=console=ttyS0,115200\0"	\
 	"mtdids=nand0=orion_nand\0"		\
-	"mtdparts="CONFIG_MTDPARTS_DEFAULT	\
+	"mtdparts="CONFIG_MTDPARTS		\
 	"kernel=/boot/uImage\0"			\
 	"bootargs_root=noinitrd ubi.mtd=2 root=ubi0:rootfs rootfstype=ubifs\0"
 

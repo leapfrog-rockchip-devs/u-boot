@@ -1,10 +1,11 @@
-/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * (C) Copyright 2001 Sysgo Real-Time Solutions, GmbH <www.elinos.com>
  * Andreas Heppel <aheppel@sysgo.de>
  *
  * (C) Copyright 2002
  * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef _PCI_H
@@ -584,6 +585,8 @@ struct pci_controller {
 	/* Used by auto config */
 	struct pci_region *pci_mem, *pci_io, *pci_prefetch;
 
+	/* Used by ppc405 autoconfig*/
+	struct pci_region *pci_fb;
 #ifndef CONFIG_DM_PCI
 	int current_busno;
 
@@ -680,21 +683,8 @@ extern int pci_write_config_dword(pci_dev_t dev, int where, u32 val);
 void pciauto_region_init(struct pci_region *res);
 void pciauto_region_align(struct pci_region *res, pci_size_t size);
 void pciauto_config_init(struct pci_controller *hose);
-
-/**
- * pciauto_region_allocate() - Allocate resources from a PCI resource region
- *
- * Allocates @size bytes from the PCI resource @res. If @supports_64bit is
- * false, the result will be guaranteed to fit in 32 bits.
- *
- * @res:		PCI region to allocate from
- * @size:		Amount of bytes to allocate
- * @bar:		Returns the PCI bus address of the allocated resource
- * @supports_64bit:	Whether to allow allocations above the 32-bit boundary
- * @return 0 if successful, -1 on failure
- */
 int pciauto_region_allocate(struct pci_region *res, pci_size_t size,
-			    pci_addr_t *bar, bool supports_64bit);
+			    pci_addr_t *bar);
 
 #if !defined(CONFIG_DM_PCI) || defined(CONFIG_DM_PCI_COMPAT)
 extern int pci_hose_read_config_byte_via_dword(struct pci_controller *hose,
@@ -1095,57 +1085,6 @@ int pci_write_config8(pci_dev_t pcidev, int offset, u8 value);
 int pci_read_config32(pci_dev_t pcidev, int offset, u32 *valuep);
 int pci_read_config16(pci_dev_t pcidev, int offset, u16 *valuep);
 int pci_read_config8(pci_dev_t pcidev, int offset, u8 *valuep);
-
-/**
- * pci_generic_mmap_write_config() - Generic helper for writing to
- * memory-mapped PCI configuration space.
- * @bus: Pointer to the PCI bus
- * @addr_f: Callback for calculating the config space address
- * @bdf: Identifies the PCI device to access
- * @offset: The offset into the device's configuration space
- * @value: The value to write
- * @size: Indicates the size of access to perform
- *
- * Write the value @value of size @size from offset @offset within the
- * configuration space of the device identified by the bus, device & function
- * numbers in @bdf on the PCI bus @bus. The callback function @addr_f is
- * responsible for calculating the CPU address of the respective configuration
- * space offset.
- *
- * Return: 0 on success, else -EINVAL
- */
-int pci_generic_mmap_write_config(
-	struct udevice *bus,
-	int (*addr_f)(struct udevice *bus, pci_dev_t bdf, uint offset, void **addrp),
-	pci_dev_t bdf,
-	uint offset,
-	ulong value,
-	enum pci_size_t size);
-
-/**
- * pci_generic_mmap_read_config() - Generic helper for reading from
- * memory-mapped PCI configuration space.
- * @bus: Pointer to the PCI bus
- * @addr_f: Callback for calculating the config space address
- * @bdf: Identifies the PCI device to access
- * @offset: The offset into the device's configuration space
- * @valuep: A pointer at which to store the read value
- * @size: Indicates the size of access to perform
- *
- * Read a value of size @size from offset @offset within the configuration
- * space of the device identified by the bus, device & function numbers in @bdf
- * on the PCI bus @bus. The callback function @addr_f is responsible for
- * calculating the CPU address of the respective configuration space offset.
- *
- * Return: 0 on success, else -EINVAL
- */
-int pci_generic_mmap_read_config(
-	struct udevice *bus,
-	int (*addr_f)(struct udevice *bus, pci_dev_t bdf, uint offset, void **addrp),
-	pci_dev_t bdf,
-	uint offset,
-	ulong *valuep,
-	enum pci_size_t size);
 
 #ifdef CONFIG_DM_PCI_COMPAT
 /* Compatibility with old naming */

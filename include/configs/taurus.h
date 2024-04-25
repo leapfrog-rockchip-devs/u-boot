@@ -1,4 +1,3 @@
-/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Common board functions for Siemens TAURUS (AT91SAM9G20) based boards
  * (C) Copyright 2013 Siemens AG
@@ -9,6 +8,8 @@
  * (C) Copyright 2007-2008
  * Stelian Pop <stelian@popies.net>
  * Lead Tech Design <www.leadtechdesign.com>
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __CONFIG_H
@@ -31,6 +32,8 @@
  * Since the linker has to swallow that define, we must use a pure
  * hex number here!
  */
+
+#define CONFIG_SYS_TEXT_BASE		0x21000000
 
 /* ARM asynchronous clock */
 #define CONFIG_SYS_AT91_SLOW_CLOCK	32768		/* slow clock xtal */
@@ -118,6 +121,7 @@
 
 #if defined(CONFIG_SPL_BUILD)
 /* SPL related */
+#define CONFIG_SPL_SPI_LOAD
 #define CONFIG_SYS_SPI_U_BOOT_OFFS	0x20000
 
 #define CONFIG_SF_DEFAULT_BUS 0
@@ -134,6 +138,10 @@
 #define CONFIG_ENV_SIZE		(SZ_128K)	/* 1 sector = 128 kB */
 #define CONFIG_BOOTCOMMAND	"nand read 0x22000000 0x200000 0x300000; bootm"
 
+#define CONFIG_SYS_LONGHELP
+#define CONFIG_CMDLINE_EDITING
+#define CONFIG_AUTO_COMPLETE
+
 /*
  * Size of malloc() pool
  */
@@ -141,6 +149,7 @@
 	ROUND(3 * CONFIG_ENV_SIZE + SZ_4M, 0x1000)
 
 /* Defines for SPL */
+#define CONFIG_SPL_FRAMEWORK
 #define CONFIG_SPL_TEXT_BASE		0x0
 #define CONFIG_SPL_MAX_SIZE		(31 * SZ_512)
 #define	CONFIG_SPL_STACK		(ATMEL_BASE_SRAM1 + SZ_16K)

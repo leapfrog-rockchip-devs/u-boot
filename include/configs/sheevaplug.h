@@ -1,9 +1,10 @@
-/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * (C) Copyright 2009-2014
  * Gerald Kerma <dreagle@doukki.net>
  * Marvell Semiconductor <www.marvell.com>
  * Written-by: Prafulla Wadaskar <prafulla@marvell.com>
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef _CONFIG_SHEEVAPLUG_H
@@ -13,6 +14,7 @@
  * High Level Configuration Options (easy to change)
  */
 #define CONFIG_FEROCEON_88FR131	1	/* CPU Core subversion */
+#define CONFIG_MACH_SHEEVAPLUG	/* Machine type */
 
 /*
  * Commands configuration
@@ -42,11 +44,6 @@
 #define CONFIG_ENV_SIZE			0x20000	/* 128k */
 #define CONFIG_ENV_ADDR			0x80000
 #define CONFIG_ENV_OFFSET		0x80000	/* env starts here */
-/*
- * Environment is right behind U-Boot in flash. Make sure U-Boot
- * doesn't grow into the environment area.
- */
-#define CONFIG_BOARD_SIZE_LIMIT		CONFIG_ENV_OFFSET
 
 /*
  * Default environment variables
@@ -55,11 +52,21 @@
 	"setenv bootargs ${x_bootargs} ${x_bootargs_root}; "	\
 	"bootm 0x6400000;"
 
+#define CONFIG_MTDPARTS		\
+	"orion_nand:512K(uboot),"				\
+	"512K(env),4M(kernel),"					\
+	"-(rootfs)\0"
+
 #define CONFIG_EXTRA_ENV_SETTINGS	"x_bootargs=console"	\
-	"=ttyS0,115200 mtdparts="CONFIG_MTDPARTS_DEFAULT	\
+	"=ttyS0,115200 mtdparts="CONFIG_MTDPARTS	\
 	"x_bootcmd_kernel=nand read 0x6400000 0x100000 0x400000\0" \
 	"x_bootcmd_usb=usb start\0" \
 	"x_bootargs_root=root=/dev/mtdblock3 rw rootfstype=jffs2\0"
+
+#define MTDIDS_DEFAULT	"nand0=orion_nand"
+
+#define MTDPARTS_DEFAULT	\
+	"mtdparts="CONFIG_MTDPARTS
 
 /*
  * Ethernet Driver configuration

@@ -1,8 +1,9 @@
-/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright 2010-2012 Freescale Semiconductor, Inc.
  * Authors: Srikanth Srinivasan <srikanth.srinivasan@freescale.com>
  *          Timur Tabi <timur@freescale.com>
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __CONFIG_H
@@ -11,8 +12,10 @@
 #include "../board/freescale/common/ics307_clk.h"
 
 #ifdef CONFIG_SDCARD
+#define CONFIG_SPL_MMC_MINIMAL
 #define CONFIG_SPL_FLUSH_IMAGE
 #define CONFIG_SPL_TARGET		"u-boot-with-spl.bin"
+#define CONFIG_SYS_TEXT_BASE		0x11001000
 #define CONFIG_SPL_TEXT_BASE		0xf8f81000
 #define CONFIG_SPL_PAD_TO		0x20000
 #define CONFIG_SPL_MAX_SIZE		(128 * 1024)
@@ -32,6 +35,7 @@
 #define CONFIG_SPL_SPI_FLASH_MINIMAL
 #define CONFIG_SPL_FLUSH_IMAGE
 #define CONFIG_SPL_TARGET		"u-boot-with-spl.bin"
+#define CONFIG_SYS_TEXT_BASE		0x11001000
 #define CONFIG_SPL_TEXT_BASE		0xf8f81000
 #define CONFIG_SPL_PAD_TO		0x20000
 #define CONFIG_SPL_MAX_SIZE		(128 * 1024)
@@ -77,10 +81,16 @@
 #define CONFIG_SPL_PAD_TO		0x20000
 #define CONFIG_TPL_PAD_TO		0x20000
 #define CONFIG_SPL_TARGET		"u-boot-with-spl.bin"
+#define CONFIG_SYS_TEXT_BASE		0x11001000
 #define CONFIG_SYS_LDSCRIPT	"arch/powerpc/cpu/mpc85xx/u-boot-nand.lds"
 #endif
 
 /* High Level Configuration Options */
+#define CONFIG_MP			/* support multiple processors */
+
+#ifndef CONFIG_SYS_TEXT_BASE
+#define CONFIG_SYS_TEXT_BASE	0xeff40000
+#endif
 
 #ifndef CONFIG_RESET_VECTOR_ADDRESS
 #define CONFIG_RESET_VECTOR_ADDRESS	0xeffffffc
@@ -262,6 +272,7 @@
 
 #endif /* CONFIG_NAND_FSL_ELBC */
 
+#define CONFIG_BOARD_EARLY_INIT_R
 #define CONFIG_MISC_INIT_R
 #define CONFIG_HWCONFIG
 
@@ -306,6 +317,7 @@
 #define CONFIG_SYS_INIT_L2_END	(CONFIG_SYS_INIT_L2_ADDR + CONFIG_SYS_L2_SIZE)
 #define CONFIG_SPL_RELOC_TEXT_BASE	0xf8f81000
 #define CONFIG_SPL_RELOC_STACK		(CONFIG_SYS_INIT_L2_ADDR + 116 * 1024)
+#define CONFIG_SPL_RELOC_STACK_SIZE	(32 << 10)
 #define CONFIG_SPL_RELOC_MALLOC_ADDR	(CONFIG_SYS_INIT_L2_ADDR + 148 * 1024)
 #define CONFIG_SPL_RELOC_MALLOC_SIZE	(108 << 10)
 #define CONFIG_SPL_GD_ADDR		(CONFIG_SYS_INIT_L2_ADDR + 112 * 1024)
@@ -334,6 +346,7 @@
 /*
  * Serial Port
  */
+#define CONFIG_CONS_INDEX		1
 #define CONFIG_SYS_NS16550_SERIAL
 #define CONFIG_SYS_NS16550_REG_SIZE	1
 #define CONFIG_SYS_NS16550_CLK		get_bus_freq(0)
@@ -359,6 +372,9 @@
  * disable empty flash sector detection, which is I/O-intensive.
  */
 #undef CONFIG_SYS_FLASH_EMPTY_INFO
+#endif
+
+#ifndef CONFIG_FSL_DIU_FB
 #endif
 
 #ifdef CONFIG_ATI
@@ -466,6 +482,8 @@
 #endif
 
 /* SATA */
+#define CONFIG_LIBATA
+#define CONFIG_FSL_SATA
 #define CONFIG_FSL_SATA_V2
 
 #define CONFIG_SYS_SATA_MAX_DEVICE	2
@@ -481,9 +499,11 @@
 #endif
 
 #ifdef CONFIG_MMC
+#define CONFIG_FSL_ESDHC
 #define CONFIG_SYS_FSL_ESDHC_ADDR	CONFIG_SYS_MPC85xx_ESDHC_ADDR
 #endif
 
+#define CONFIG_TSEC_ENET
 #ifdef CONFIG_TSEC_ENET
 
 #define CONFIG_TSECV2
@@ -510,6 +530,17 @@
  * Dynamic MTD Partition support with mtdparts
  */
 #define CONFIG_FLASH_CFI_MTD
+#ifdef CONFIG_PHYS_64BIT
+#define MTDIDS_DEFAULT "nor0=fe8000000.nor"
+#define MTDPARTS_DEFAULT "mtdparts=fe8000000.nor:48m(ramdisk)," \
+			"14m(diagnostic),2m(dink),6m(kernel),58112k(fs)," \
+			"512k(dtb),768k(u-boot)"
+#else
+#define MTDIDS_DEFAULT "nor0=e8000000.nor"
+#define MTDPARTS_DEFAULT "mtdparts=e8000000.nor:48m(ramdisk)," \
+			"14m(diagnostic),2m(dink),6m(kernel),58112k(fs)," \
+			"512k(dtb),768k(u-boot)"
+#endif
 
 /*
  * Environment
@@ -561,6 +592,9 @@
 /*
  * Miscellaneous configurable options
  */
+#define CONFIG_SYS_LONGHELP			/* undef to save memory	*/
+#define CONFIG_CMDLINE_EDITING			/* Command-line editing */
+#define CONFIG_AUTO_COMPLETE			/* add autocompletion support */
 #define CONFIG_SYS_LOAD_ADDR	0x2000000	/* default load address */
 
 /*
@@ -579,7 +613,7 @@
  * Environment Configuration
  */
 
-#define CONFIG_HOSTNAME		"p1022ds"
+#define CONFIG_HOSTNAME		p1022ds
 #define CONFIG_ROOTPATH		"/opt/nfsroot"
 #define CONFIG_BOOTFILE		"uImage"
 #define CONFIG_UBOOTPATH	u-boot.bin	/* U-Boot image on TFTP server */

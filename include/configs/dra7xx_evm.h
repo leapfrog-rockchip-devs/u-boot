@@ -1,4 +1,3 @@
-/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * (C) Copyright 2013
  * Texas Instruments Incorporated.
@@ -6,6 +5,8 @@
  *
  * Configuration settings for the TI DRA7XX board.
  * See ti_omap5_common.h for omap5 common settings.
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __CONFIG_DRA7XX_EVM_H
@@ -13,7 +14,9 @@
 
 #include <environment/ti/dfu.h>
 
+#ifdef CONFIG_SPL_BUILD
 #define CONFIG_IODELAY_RECALIBRATION
+#endif
 
 #define CONFIG_VERY_BIG_RAM
 #define CONFIG_NR_DRAM_BANKS		2
@@ -44,6 +47,29 @@
 #define CONFIG_SYS_OMAP_ABE_SYSCK
 
 #ifndef CONFIG_SPL_BUILD
+/* Define the default GPT table for eMMC */
+#define PARTS_DEFAULT \
+	/* Linux partitions */ \
+	"uuid_disk=${uuid_gpt_disk};" \
+	"name=rootfs,start=2MiB,size=-,uuid=${uuid_gpt_rootfs}\0" \
+	/* Android partitions */ \
+	"partitions_android=" \
+	"uuid_disk=${uuid_gpt_disk};" \
+	"name=xloader,start=128K,size=256K,uuid=${uuid_gpt_xloader};" \
+	"name=bootloader,size=1792K,uuid=${uuid_gpt_bootloader};" \
+	"name=environment,size=128K,uuid=${uuid_gpt_environment};" \
+	"name=misc,size=128K,uuid=${uuid_gpt_misc};" \
+	"name=reserved,size=256K,uuid=${uuid_gpt_reserved};" \
+	"name=efs,size=16M,uuid=${uuid_gpt_efs};" \
+	"name=crypto,size=16K,uuid=${uuid_gpt_crypto};" \
+	"name=recovery,size=10M,uuid=${uuid_gpt_recovery};" \
+	"name=boot,size=10M,uuid=${uuid_gpt_boot};" \
+	"name=system,size=768M,uuid=${uuid_gpt_system};" \
+	"name=cache,size=256M,uuid=${uuid_gpt_cache};" \
+	"name=ipu1,size=1M,uuid=${uuid_gpt_ipu1};" \
+	"name=ipu2,size=1M,uuid=${uuid_gpt_ipu2};" \
+	"name=userdata,size=-,uuid=${uuid_gpt_userdata}"
+
 #define DFUARGS \
 	"dfu_bufsiz=0x10000\0" \
 	DFU_ALT_INFO_MMC \
@@ -54,7 +80,7 @@
 
 #ifdef CONFIG_SPL_BUILD
 #undef CONFIG_CMD_BOOTD
-#ifdef CONFIG_SPL_DFU_SUPPORT
+#ifdef CONFIG_SPL_DFU
 #define CONFIG_SPL_LOAD_FIT_ADDRESS 0x80200000
 #define DFUARGS \
 	"dfu_bufsiz=0x10000\0" \
@@ -68,9 +94,13 @@
 #define CONFIG_HSMMC2_8BIT
 
 /* CPSW Ethernet */
+#define CONFIG_BOOTP_DNS		/* Configurable parts of CMD_DHCP */
 #define CONFIG_BOOTP_DNS2
 #define CONFIG_BOOTP_SEND_HOSTNAME
+#define CONFIG_BOOTP_GATEWAY
+#define CONFIG_BOOTP_SUBNETMASK
 #define CONFIG_NET_RETRY_COUNT		10
+#define CONFIG_DRIVER_TI_CPSW		/* Driver for IP block */
 #define CONFIG_MII			/* Required in net/eth.c */
 #define CONFIG_PHY_TI
 
@@ -104,6 +134,7 @@
 
 /* SPI SPL */
 #define CONFIG_TI_EDMA3
+#define CONFIG_SPL_SPI_LOAD
 #define CONFIG_SYS_SPI_U_BOOT_OFFS     0x40000
 
 #define CONFIG_SUPPORT_EMMC_BOOT
@@ -111,9 +142,12 @@
 /* USB xHCI HOST */
 #define CONFIG_USB_XHCI_OMAP
 
+#define CONFIG_OMAP_USB_PHY
 #define CONFIG_OMAP_USB2PHY2_HOST
 
 /* SATA */
+#define CONFIG_LIBATA
+#define CONFIG_SCSI_AHCI
 #define CONFIG_SCSI_AHCI_PLAT
 #define CONFIG_SYS_SCSI_MAX_SCSI_ID	1
 #define CONFIG_SYS_SCSI_MAX_LUN		1
@@ -142,6 +176,18 @@
 					 50, 51, 52, 53, 54, 55, 56, 57, }
 #define CONFIG_SYS_NAND_ECCSIZE		512
 #define CONFIG_SYS_NAND_ECCBYTES	14
+#define MTDIDS_DEFAULT			"nand0=nand.0"
+#define MTDPARTS_DEFAULT		"mtdparts=nand.0:" \
+					"128k(NAND.SPL)," \
+					"128k(NAND.SPL.backup1)," \
+					"128k(NAND.SPL.backup2)," \
+					"128k(NAND.SPL.backup3)," \
+					"256k(NAND.u-boot-spl-os)," \
+					"1m(NAND.u-boot)," \
+					"128k(NAND.u-boot-env)," \
+					"128k(NAND.u-boot-env.backup1)," \
+					"8m(NAND.kernel)," \
+					"-(NAND.file-system)"
 #define CONFIG_SYS_NAND_U_BOOT_OFFS	0x000c0000
 /* NAND: SPL related configs */
 /* NAND: SPL falcon mode configs */
@@ -168,6 +214,18 @@
 /* Reduce SPL size by removing unlikey targets */
 #ifdef CONFIG_NOR_BOOT
 #define CONFIG_ENV_SECT_SIZE		(128 * 1024)	/* 128 KiB */
+#define MTDIDS_DEFAULT			"nor0=physmap-flash.0"
+#define MTDPARTS_DEFAULT		"mtdparts=physmap-flash.0:" \
+					"128k(NOR.SPL)," \
+					"128k(NOR.SPL.backup1)," \
+					"128k(NOR.SPL.backup2)," \
+					"128k(NOR.SPL.backup3)," \
+					"256k(NOR.u-boot-spl-os)," \
+					"1m(NOR.u-boot)," \
+					"128k(NOR.u-boot-env)," \
+					"128k(NOR.u-boot-env.backup1)," \
+					"8m(NOR.kernel)," \
+					"-(NOR.rootfs)"
 #define CONFIG_ENV_OFFSET		0x001c0000
 #define CONFIG_ENV_OFFSET_REDUND	0x001e0000
 #endif

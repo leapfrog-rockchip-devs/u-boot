@@ -1,8 +1,9 @@
-/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright 2013 Freescale Semiconductor, Inc.
  *
  * Configuration settings for the phytec PCM-052 SoM.
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __CONFIG_H
@@ -32,8 +33,22 @@
 
 /* Dynamic MTD partition support */
 
+#ifndef MTDIDS_DEFAULT
+#define MTDIDS_DEFAULT			"nand0=NAND"
 #endif
 
+#ifndef MTDPARTS_DEFAULT
+#define MTDPARTS_DEFAULT		"mtdparts=NAND:640k(bootloader)"\
+					",128k(env1)"\
+					",128k(env2)"\
+					",128k(dtb)"\
+					",6144k(kernel)"\
+					",-(root)"
+#endif
+
+#endif
+
+#define CONFIG_FSL_ESDHC
 #define CONFIG_SYS_FSL_ESDHC_ADDR	0
 #define CONFIG_SYS_FSL_ESDHC_NUM	1
 
@@ -72,7 +87,8 @@
 #define CONFIG_LOADADDR			0x82000000
 
 /* We boot from the gfxRAM area of the OCRAM. */
-#define CONFIG_BOARD_SIZE_LIMIT		520192
+#define CONFIG_SYS_TEXT_BASE		0x3f408000
+#define CONFIG_BOARD_SIZE_LIMIT		524288
 
 /* if no target-specific extra environment settings were defined by the
    target, define an empty one */
@@ -115,7 +131,7 @@
 	"nfs_root=/path/to/nfs/root\0" \
 	"tftptimeout=1000\0" \
 	"tftptimeoutcountmax=1000000\0" \
-	"mtdparts=" CONFIG_MTDPARTS_DEFAULT "\0" \
+	"mtdparts=" MTDPARTS_DEFAULT "\0" \
 	"bootargs_base=setenv bootargs rw " \
 		" mem=" __stringify(CONFIG_PCM052_DDR_SIZE) "M " \
 		"console=ttyLP1,115200n8\0" \
@@ -182,6 +198,9 @@
 		"nand write ${ram_addr} root ${filesize}; fi\0"
 
 /* Miscellaneous configurable options */
+#define CONFIG_SYS_LONGHELP		/* undef to save memory */
+#define CONFIG_AUTO_COMPLETE
+#define CONFIG_CMDLINE_EDITING
 
 #define CONFIG_SYS_MEMTEST_START	0x80010000
 #define CONFIG_SYS_MEMTEST_END		0x87C00000

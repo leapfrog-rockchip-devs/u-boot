@@ -1,8 +1,9 @@
-/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * (C) Copyright 2015 Hans de Goede <hdegoede@redhat.com>
  *
  * X-Powers AX Power Management IC support header
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 #ifndef _AXP_PMIC_H_
 

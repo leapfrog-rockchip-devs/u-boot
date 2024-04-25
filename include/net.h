@@ -1,9 +1,9 @@
-/* SPDX-License-Identifier: GPL-2.0 */
 /*
  *	LiMon Monitor (LiMon) - Network.
  *
  *	Copyright 1994 - 2000 Neil Russell.
  *	(See License)
+ *	SPDX-License-Identifier:	GPL-2.0
  *
  * History
  *	9/16/00	  bor  adapted to TQM823L/STK8xxL board, RARP/TFTP boot added
@@ -238,6 +238,9 @@ void eth_try_another(int first_restart);	/* Change the device */
 void eth_set_current(void);		/* set nterface to ethcur var */
 
 int eth_get_dev_index(void);		/* get the device index */
+void eth_parse_enetaddr(const char *addr, uchar *enetaddr);
+int eth_env_get_enetaddr(const char *name, uchar *enetaddr);
+int eth_env_set_enetaddr(const char *name, const uchar *enetaddr);
 
 /**
  * eth_env_set_enetaddr_by_index() - set the MAC address environment variable
@@ -344,7 +347,6 @@ struct vlan_ethernet_hdr {
 
 #define PROT_IP		0x0800		/* IP protocol			*/
 #define PROT_ARP	0x0806		/* IP ARP protocol		*/
-#define PROT_WOL	0x0842		/* ether-wake WoL protocol	*/
 #define PROT_RARP	0x8035		/* IP ARP protocol		*/
 #define PROT_VLAN	0x8100		/* IEEE 802.1q protocol		*/
 #define PROT_IPV6	0x86dd		/* IPv6 over bluebook		*/
@@ -536,12 +538,10 @@ extern int		net_restart_wrap;	/* Tried all network devices */
 
 enum proto_t {
 	BOOTP, RARP, ARP, TFTPGET, DHCP, PING, DNS, NFS, CDP, NETCONS, SNTP,
-	TFTPSRV, TFTPPUT, LINKLOCAL, FASTBOOT, WOL
+	TFTPSRV, TFTPPUT, LINKLOCAL, FASTBOOT
 };
 
 extern char	net_boot_file_name[1024];/* Boot File name */
-/* Indicates whether the file name was specified on the command line */
-extern bool	net_boot_file_name_explicit;
 /* The actual transferred size of the bootfile (in bytes) */
 extern u32	net_boot_file_size;
 /* Boot file size in blocks as reported by the DHCP server */
@@ -550,6 +550,10 @@ extern u32	net_boot_file_expected_size_in_blocks;
 #if defined(CONFIG_CMD_DNS)
 extern char *net_dns_resolve;		/* The host to resolve  */
 extern char *net_dns_env_var;		/* the env var to put the ip into */
+#endif
+
+#if defined(CONFIG_UDP_FUNCTION_FASTBOOT)
+int do_fastboot_udp(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[]);
 #endif
 
 #if defined(CONFIG_CMD_PING)
@@ -676,7 +680,7 @@ int net_send_udp_packet(uchar *ether, struct in_addr dest, int dport,
 /* Processes a received packet */
 void net_process_received_packet(uchar *in_packet, int len);
 
-#if defined(CONFIG_NETCONSOLE) && !defined(CONFIG_SPL_BUILD)
+#ifdef CONFIG_NETCONSOLE
 void nc_start(void);
 int nc_input_packet(uchar *pkt, struct in_addr src_ip, unsigned dest_port,
 	unsigned src_port, unsigned len);
@@ -684,7 +688,7 @@ int nc_input_packet(uchar *pkt, struct in_addr src_ip, unsigned dest_port,
 
 static __always_inline int eth_is_on_demand_init(void)
 {
-#if defined(CONFIG_NETCONSOLE) && !defined(CONFIG_SPL_BUILD)
+#ifdef CONFIG_NETCONSOLE
 	extern enum proto_t net_loop_last_protocol;
 
 	return net_loop_last_protocol != NETCONS;
@@ -695,7 +699,7 @@ static __always_inline int eth_is_on_demand_init(void)
 
 static inline void eth_set_last_protocol(int protocol)
 {
-#if defined(CONFIG_NETCONSOLE) && !defined(CONFIG_SPL_BUILD)
+#ifdef CONFIG_NETCONSOLE
 	extern enum proto_t net_loop_last_protocol;
 
 	net_loop_last_protocol = protocol;
@@ -838,20 +842,6 @@ ushort env_get_vlan(char *);
 
 /* copy a filename (allow for "..." notation, limit length) */
 void copy_filename(char *dst, const char *src, int size);
-
-/* check if serverip is specified in filename from the command line */
-int is_serverip_in_cmd(void);
-
-/**
- * net_parse_bootfile - Parse the bootfile env var / cmd line param
- *
- * @param ipaddr - a pointer to the ipaddr to populate if included in bootfile
- * @param filename - a pointer to the string to save the filename part
- * @param max_len - The longest - 1 that the filename part can be
- *
- * return 1 if parsed, 0 if bootfile is empty
- */
-int net_parse_bootfile(struct in_addr *ipaddr, char *filename, int max_len);
 
 /* get a random source port */
 unsigned int random_port(void);

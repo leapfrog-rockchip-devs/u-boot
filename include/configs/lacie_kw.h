@@ -1,6 +1,7 @@
-/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright (C) 2011 Simon Guinot <sguinot@lacie.com>
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef _CONFIG_LACIE_KW_H
@@ -38,6 +39,12 @@
 #define CONFIG_KW88F6281
 #endif
 #define CONFIG_SKIP_LOWLEVEL_INIT	/* disable board lowlevel_init */
+
+/*
+ * Commands configuration
+ */
+#ifndef CONFIG_NETSPACE_MINI_V2 /* No USB ports on Network Space v2 Mini */
+#endif
 
 /*
  * Core clock definition

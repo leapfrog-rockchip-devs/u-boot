@@ -19,27 +19,12 @@
 #include <linux/string.h>
 #include <linux/types.h>
 
-/*
- * EFI on x86_64 uses the Microsoft ABI which is not the default for GCC.
- *
- * There are two scenarios for EFI on x86_64: building a 64-bit EFI stub
- * codes (CONFIG_EFI_STUB_64BIT) and building a 64-bit U-Boot (CONFIG_X86_64).
- * Either needs to be properly built with the '-m64' compiler flag, and hence
- * it is enough to only check the compiler provided define __x86_64__ here.
- */
-#ifdef __x86_64__
+#ifdef CONFIG_EFI_STUB_64BIT
+/* EFI uses the Microsoft ABI which is not the default for GCC */
 #define EFIAPI __attribute__((ms_abi))
-#define efi_va_list __builtin_ms_va_list
-#define efi_va_start __builtin_ms_va_start
-#define efi_va_arg __builtin_va_arg
-#define efi_va_end __builtin_ms_va_end
 #else
 #define EFIAPI asmlinkage
-#define efi_va_list va_list
-#define efi_va_start va_start
-#define efi_va_arg va_arg
-#define efi_va_end va_end
-#endif /* __x86_64__ */
+#endif
 
 struct efi_device_path;
 
@@ -47,7 +32,16 @@ typedef struct {
 	u8 b[16];
 } efi_guid_t;
 
-#define EFI_BITS_PER_LONG	(sizeof(long) * 8)
+#define EFI_BITS_PER_LONG	BITS_PER_LONG
+
+/*
+ * With 64-bit EFI stub, EFI_BITS_PER_LONG has to be 64. EFI_STUB is set
+ * in lib/efi/Makefile, when building the stub.
+ */
+#if defined(CONFIG_EFI_STUB_64BIT) && defined(EFI_STUB)
+#undef EFI_BITS_PER_LONG
+#define EFI_BITS_PER_LONG	64
+#endif
 
 /* Bit mask for EFI status code with error */
 #define EFI_ERROR_MASK (1UL << (EFI_BITS_PER_LONG - 1))
@@ -87,19 +81,18 @@ typedef struct {
 #define EFI_IP_ADDRESS_CONFLICT		(EFI_ERROR_MASK | 34)
 #define EFI_HTTP_ERROR			(EFI_ERROR_MASK | 35)
 
-#define EFI_WARN_DELETE_FAILURE	2
-
 typedef unsigned long efi_status_t;
 typedef u64 efi_physical_addr_t;
 typedef u64 efi_virtual_addr_t;
 typedef void *efi_handle_t;
 
 #define EFI_GUID(a, b, c, d0, d1, d2, d3, d4, d5, d6, d7) \
+	((efi_guid_t) \
 	{{ (a) & 0xff, ((a) >> 8) & 0xff, ((a) >> 16) & 0xff, \
 		((a) >> 24) & 0xff, \
 		(b) & 0xff, ((b) >> 8) & 0xff, \
 		(c) & 0xff, ((c) >> 8) & 0xff, \
-		(d0), (d1), (d2), (d3), (d4), (d5), (d6), (d7) } }
+		(d0), (d1), (d2), (d3), (d4), (d5), (d6), (d7) } })
 
 /* Generic EFI table header */
 struct efi_table_hdr {
@@ -127,7 +120,7 @@ enum efi_mem_type {
 	/* The code portions of a loaded Boot Services Driver */
 	EFI_BOOT_SERVICES_CODE,
 	/*
-	 * The data portions of a loaded Boot Services Driver and
+	 * The data portions of a loaded Boot Serves Driver and
 	 * the default data allocation type used by a Boot Services
 	 * Driver to allocate pool memory.
 	 */
@@ -232,9 +225,9 @@ struct efi_time_cap {
 };
 
 enum efi_locate_search_type {
-	ALL_HANDLES,
-	BY_REGISTER_NOTIFY,
-	BY_PROTOCOL
+	all_handles,
+	by_register_notify,
+	by_protocol
 };
 
 struct efi_open_protocol_info_entry {
@@ -247,7 +240,6 @@ struct efi_open_protocol_info_entry {
 enum efi_entry_t {
 	EFIET_END,	/* Signals this is the last (empty) entry */
 	EFIET_MEMORY_MAP,
-	EFIET_GOP_MODE,
 
 	/* Number of entries */
 	EFIET_MEMORY_COUNT,
@@ -304,40 +296,6 @@ struct efi_entry_memmap {
 	struct efi_mem_desc desc[];
 };
 
-/**
- * struct efi_entry_gopmode - a GOP mode table passed to U-Boot
- *
- * @fb_base:	EFI's framebuffer base address
- * @fb_size:	EFI's framebuffer size
- * @info_size:	GOP mode info structure size
- * @info:	Start address of the GOP mode info structure
- */
-struct efi_entry_gopmode {
-	efi_physical_addr_t fb_base;
-	/*
-	 * Not like the ones in 'struct efi_gop_mode' which are 'unsigned
-	 * long', @fb_size and @info_size have to be 'u64' here. As the EFI
-	 * stub codes may have different bit size from the U-Boot payload,
-	 * using 'long' will cause mismatch between the producer (stub) and
-	 * the consumer (payload).
-	 */
-	u64 fb_size;
-	u64 info_size;
-	/*
-	 * We cannot directly use 'struct efi_gop_mode_info info[]' here as
-	 * it causes compiler to complain: array type has incomplete element
-	 * type 'struct efi_gop_mode_info'.
-	 */
-	struct /* efi_gop_mode_info */ {
-		u32 version;
-		u32 width;
-		u32 height;
-		u32 pixel_format;
-		u32 pixel_bitmask[4];
-		u32 pixels_per_scanline;
-	} info[];
-};
-
 static inline struct efi_mem_desc *efi_get_next_mem_desc(
 		struct efi_entry_memmap *map, struct efi_mem_desc *desc)
 {
@@ -363,25 +321,6 @@ extern char image_base[];
 
 /* Start and end of U-Boot image (for payload) */
 extern char _binary_u_boot_bin_start[], _binary_u_boot_bin_end[];
-
-/*
- * Variable Attributes
- */
-#define EFI_VARIABLE_NON_VOLATILE       0x0000000000000001
-#define EFI_VARIABLE_BOOTSERVICE_ACCESS 0x0000000000000002
-#define EFI_VARIABLE_RUNTIME_ACCESS     0x0000000000000004
-#define EFI_VARIABLE_HARDWARE_ERROR_RECORD 0x0000000000000008
-#define EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS 0x0000000000000010
-#define EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS 0x0000000000000020
-#define EFI_VARIABLE_APPEND_WRITE	0x0000000000000040
-
-#define EFI_VARIABLE_MASK	(EFI_VARIABLE_NON_VOLATILE | \
-				EFI_VARIABLE_BOOTSERVICE_ACCESS | \
-				EFI_VARIABLE_RUNTIME_ACCESS | \
-				EFI_VARIABLE_HARDWARE_ERROR_RECORD | \
-				EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS | \
-				EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS | \
-				EFI_VARIABLE_APPEND_WRITE)
 
 /**
  * efi_get_sys_table() - Get access to the main EFI system table

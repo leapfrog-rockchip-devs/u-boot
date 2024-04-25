@@ -1,4 +1,3 @@
-/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright (C) 2009 Sergey Kubushyn <ksi@koi8.net>
  * Copyright (C) 2009 - 2013 Heiko Schocher <hs@denx.de>
@@ -6,6 +5,8 @@
  *
  * (C) Copyright 2001
  * Gerald Van Baren, Custom IDEAS, vanbaren@cideas.com.
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  *
  * The original I2C interface was
  *   (C) 2000 by Paolo Scaffardi (arsenio@tin.it)

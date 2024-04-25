@@ -1,7 +1,8 @@
-/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * (C) Copyright 2001
  * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /*
@@ -71,6 +72,13 @@ struct rtc_ops {
 	* @return 0 if OK, -ve on error
 	*/
 	int (*write8)(struct udevice *dev, unsigned int reg, int val);
+
+	/**
+	 * alarm_trigger()
+	 * @dev:		Device to write to
+	 * @return 1 if rtc alarm trigger boot on
+	 */
+	int (*alarm_trigger)(struct udevice *dev);
 };
 
 /* Access the operations for an RTC device */
@@ -166,6 +174,13 @@ int rtc_read32(struct udevice *dev, unsigned int reg, u32 *valuep);
  */
 int rtc_write32(struct udevice *dev, unsigned int reg, u32 value);
 
+/**
+ * rtc_alarm_trigger()
+ *
+ * @dev:	Device to write to
+ * @return 1 if rtc alarm trigger boot on
+ */
+int rtc_alarm_trigger(struct udevice *dev);
 #else
 int rtc_get (struct rtc_time *);
 int rtc_set (struct rtc_time *);
@@ -208,18 +223,7 @@ void rtc_write32(int reg, u32 value);
  * rtc_init() - Set up the real time clock ready for use
  */
 void rtc_init(void);
-#endif /* CONFIG_DM_RTC */
-
-/**
- * is_leap_year - Check if year is a leap year
- *
- * @year	Year
- * @return	1 if leap year
- */
-static inline bool is_leap_year(unsigned int year)
-{
-	return (!(year % 4) && (year % 100)) || !(year % 400);
-}
+#endif
 
 /**
  * rtc_calc_weekday() - Work out the weekday from a time
@@ -242,8 +246,9 @@ int rtc_calc_weekday(struct rtc_time *time);
  *
  * @time_t:	Number of seconds since 1970-01-01 00:00:00
  * @time:	Place to put the broken-out time
+ * @return 0 if OK, -EINVAL if the weekday could not be determined
  */
-void rtc_to_tm(u64 time_t, struct rtc_time *time);
+int rtc_to_tm(int time_t, struct rtc_time *time);
 
 /**
  * rtc_mktime() - Convert a broken-out time into a time_t value
