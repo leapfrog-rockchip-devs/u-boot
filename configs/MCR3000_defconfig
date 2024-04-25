@@ -39,10 +39,9 @@ CONFIG_SYS_OR7_PRELIM=0xFFFF810A
 CONFIG_SYS_IMMR=0xFF000000
 CONFIG_OF_BOARD_SETUP=y
 CONFIG_BOOTDELAY=5
-CONFIG_USE_BOOTCOMMAND=y
-CONFIG_BOOTCOMMAND="run flashboot"
+CONFIG_USE_BOOTARGS=y
+CONFIG_BOOTARGS="ubi.mtd=4 root=ubi0:rootfs rw rootfstype=ubifs rootflags=sync console=ttyCPM0,115200N8 ip=${ipaddr}:::${netmask}:mcr3k:eth0:off"
 CONFIG_HUSH_PARSER=y
-# CONFIG_AUTO_COMPLETE is not set
 CONFIG_SYS_PROMPT="S3K> "
 CONFIG_AUTOBOOT_KEYED=y
 CONFIG_AUTOBOOT_PROMPT="\nEnter password - autoboot in %d sec...\n"
@@ -50,7 +49,9 @@ CONFIG_AUTOBOOT_DELAY_STR="root"
 # CONFIG_CMD_BDI is not set
 # CONFIG_CMD_CONSOLE is not set
 # CONFIG_CMD_IMI is not set
+# CONFIG_CMD_IMLS is not set
 CONFIG_CMD_ASKENV=y
+# CONFIG_CMD_FPGA is not set
 # CONFIG_CMD_LOADB is not set
 # CONFIG_CMD_LOADS is not set
 CONFIG_CMD_NAND=y

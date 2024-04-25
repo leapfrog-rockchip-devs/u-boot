@@ -6,9 +6,8 @@ CONFIG_USE_BOOTARGS=y
 CONFIG_BOOTARGS="root=/dev/mtdblock2 rw rootfstype=jffs2 mtdparts=NAND:1M(u-boot)ro,7M(kernel)ro,-(jffs2) console=ttyS0,115200"
 # CONFIG_DISPLAY_BOARDINFO is not set
 CONFIG_HUSH_PARSER=y
-# CONFIG_CMDLINE_EDITING is not set
-# CONFIG_AUTO_COMPLETE is not set
 CONFIG_SYS_PROMPT="-> "
+# CONFIG_CMD_IMLS is not set
 # CONFIG_CMD_FLASH is not set
 # CONFIG_CMD_LOADB is not set
 # CONFIG_CMD_LOADS is not set
