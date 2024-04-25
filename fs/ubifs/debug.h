@@ -1,8 +1,9 @@
-/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * This file is part of UBIFS.
  *
  * Copyright (C) 2006-2008 Nokia Corporation.
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  *
  * Authors: Artem Bityutskiy (Битюцкий Артём)
  *          Adrian Hunter
@@ -167,7 +168,7 @@ struct ubifs_global_debug_info {
 #else
 #define ubifs_assert(expr) do {                                                \
 	if (unlikely(!(expr))) {                                               \
-		pr_crit("UBIFS assert failed in %s at %u\n",                   \
+		pr_debug("UBIFS assert failed in %s at %u\n",                  \
 		       __func__, __LINE__);                                    \
 		dump_stack();                                                  \
 	}                                                                      \
@@ -176,7 +177,7 @@ struct ubifs_global_debug_info {
 #define ubifs_assert_cmt_locked(c) do {                                        \
 	if (unlikely(down_write_trylock(&(c)->commit_sem))) {                  \
 		up_write(&(c)->commit_sem);                                    \
-		pr_crit("commit lock is not locked!\n");                       \
+		pr_debug("commit lock is not locked!\n");                      \
 		ubifs_assert(0);                                               \
 	}                                                                      \
 } while (0)
@@ -186,12 +187,19 @@ struct ubifs_global_debug_info {
 		 ##__VA_ARGS__)
 
 #define DBG_KEY_BUF_LEN 48
+#if defined CONFIG_MTD_DEBUG
 #define ubifs_dbg_msg_key(type, key, fmt, ...) do {                            \
 	char __tmp_key_buf[DBG_KEY_BUF_LEN];                                   \
 	pr_debug("UBIFS DBG " type ": " fmt "%s\n",                            \
 		 ##__VA_ARGS__,                                                \
 		 dbg_snprintf_key(c, key, __tmp_key_buf, DBG_KEY_BUF_LEN));    \
 } while (0)
+#else
+#define ubifs_dbg_msg_key(type, key, fmt, ...) do {                            \
+	pr_debug("UBIFS DBG\n");                                               \
+} while (0)
+
+#endif
 
 #endif
 
