@@ -1,6 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2016 Toradex AG
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <asm/arch/clock.h>
@@ -9,6 +10,7 @@
 #include <asm/arch/mx7-pins.h>
 #include <asm/arch/sys_proto.h>
 #include <asm/gpio.h>
+#include <asm/mach-imx/boot_mode.h>
 #include <asm/mach-imx/iomux-v3.h>
 #include <asm/io.h>
 #include <common.h>
@@ -278,7 +280,7 @@ static int setup_fec(void)
 			IOMUXC_GPR_GPR1_GPR_ENET1_TX_CLK_SEL_MASK);
 #endif
 
-	return set_clk_enet(ENET_50MHZ);
+	return set_clk_enet(ENET_50MHz);
 }
 
 int board_phy_config(struct phy_device *phydev)
@@ -316,6 +318,24 @@ int board_init(void)
 #ifdef CONFIG_USB_EHCI_MX7
 	imx_iomux_v3_setup_multiple_pads(usb_cdet_pads, ARRAY_SIZE(usb_cdet_pads));
 	gpio_request(USB_CDET_GPIO, "usb-cdet-gpio");
+#endif
+
+	return 0;
+}
+
+#ifdef CONFIG_CMD_BMODE
+static const struct boot_mode board_boot_modes[] = {
+	/* 4 bit bus width */
+	{"nand", MAKE_CFGVAL(0x40, 0x34, 0x00, 0x00)},
+	{"sd1", MAKE_CFGVAL(0x10, 0x10, 0x00, 0x00)},
+	{NULL, 0},
+};
+#endif
+
+int board_late_init(void)
+{
+#ifdef CONFIG_CMD_BMODE
+	add_board_boot_modes(board_boot_modes);
 #endif
 
 	return 0;
@@ -389,9 +409,8 @@ int checkboard(void)
 int ft_board_setup(void *blob, bd_t *bd)
 {
 #if defined(CONFIG_FDT_FIXUP_PARTITIONS)
-	static const struct node_info nodes[] = {
+	static struct node_info nodes[] = {
 		{ "fsl,imx7d-gpmi-nand", MTD_DEV_TYPE_NAND, }, /* NAND flash */
-		{ "fsl,imx6q-gpmi-nand", MTD_DEV_TYPE_NAND, },
 	};
 
 	/* Update partition nodes using info from mtdparts env var */

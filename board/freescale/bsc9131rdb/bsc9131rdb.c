@@ -1,6 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright 2011-2012 Freescale Semiconductor, Inc.
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -53,7 +54,7 @@ int checkboard(void)
 
 #if defined(CONFIG_OF_BOARD_SETUP)
 #ifdef CONFIG_FDT_FIXUP_PARTITIONS
-static const struct node_info nodes[] = {
+struct node_info nodes[] = {
 	{ "fsl,ifc-nand",		MTD_DEV_TYPE_NAND, },
 };
 #endif

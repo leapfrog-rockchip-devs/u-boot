@@ -1,10 +1,11 @@
-/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Override linker script for fastboot-readable images
  *
  * (C) Copyright 2015 Mateusz Kulikowski <mateusz.kulikowski@gmail.com>
  *
  * Based on arch/arm/cpu/armv8/u-boot.lds (Just add header)
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 OUTPUT_FORMAT("elf64-littleaarch64", "elf64-littleaarch64", "elf64-littleaarch64")
@@ -20,19 +21,6 @@ SECTIONS
 		*(.__image_copy_start)
 		board/qualcomm/dragonboard410c/head.o (.text*)
 		CPUDIR/start.o (.text*)
-	}
-
-	/* This needs to come before *(.text*) */
-	.efi_runtime : {
-                __efi_runtime_start = .;
-		*(.text.efi_runtime*)
-		*(.rodata.efi_runtime*)
-		*(.data.efi_runtime*)
-                __efi_runtime_stop = .;
-	}
-
-	.text_rest :
-	{
 		*(.text*)
 	}
 
@@ -64,8 +52,8 @@ SECTIONS
 
 	.efi_runtime_rel : {
                 __efi_runtime_rel_start = .;
-		*(.rel*.efi_runtime)
-		*(.rel*.efi_runtime.*)
+		*(.relaefi_runtime_text)
+		*(.relaefi_runtime_data)
                 __efi_runtime_rel_stop = .;
 	}
 

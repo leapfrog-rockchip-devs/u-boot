@@ -1,6 +1,7 @@
-/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright (c) 2016 Toradex, Inc.
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef _TDX_CFG_BLOCK_H
@@ -54,13 +55,6 @@ enum {
 	COLIBRI_IMX7D,
 	APALIS_TK1_2GB,
 	APALIS_IMX6D_IT,
-	COLIBRI_IMX6ULL,
-	APALIS_IMX8QM, /* 37 */
-	COLIBRI_IMX8X,
-	COLIBRI_IMX7D_EMMC,
-	COLIBRI_IMX6ULL_WIFI_BT_IT, /* 40 */
-	COLIBRI_IMX7D_EPDC,
-	APALIS_TK1_4GB,
 };
 
 extern const char * const toradex_modules[];

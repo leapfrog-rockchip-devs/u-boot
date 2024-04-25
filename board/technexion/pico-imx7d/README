@@ -35,17 +35,12 @@ Use the default environment variables:
 => env default -f -a
 => saveenv
 
-Run the DFU agent so we can flash the new images using dfu-util tool:
+Run the UMS command:
+=> ums 0 mmc 0
 
-=> dfu 0 mmc 0
+Transfer u-boot.imx to be flashed into the eMMC:
 
-Flash SPL into the eMMC:
-
-$ sudo dfu-util -D SPL -a spl
-
-Flash u-boot.img into the eMMC:
-
-$ sudo dfu-util -D u-boot.img -a u-boot
+$ sudo dd if=u-boot.imx of=/dev/sdX bs=1K seek=1; sync
 
 Remove power from the pico board.
 

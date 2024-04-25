@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2012-2013 Henrik Nordstrom <henrik@henriknordstrom.net>
  * (C) Copyright 2013 Luke Kenneth Casson Leighton <lkcl@lkcl.net>
@@ -8,14 +7,13 @@
  * Tom Cubie <tangliang@allwinnertech.com>
  *
  * Some board init for the Allwinner A10-evb board.
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
-#include <dm.h>
 #include <mmc.h>
 #include <axp_pmic.h>
-#include <generic-phy.h>
-#include <phy-sun4i-usb.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/cpu.h>
 #include <asm/arch/display.h>
@@ -23,6 +21,7 @@
 #include <asm/arch/gpio.h>
 #include <asm/arch/mmc.h>
 #include <asm/arch/spl.h>
+#include <asm/arch/usb_phy.h>
 #ifndef CONFIG_ARM64
 #include <asm/armv7.h>
 #endif
@@ -33,7 +32,6 @@
 #include <linux/libfdt.h>
 #include <nand.h>
 #include <net.h>
-#include <spl.h>
 #include <sy8106a.h>
 #include <asm/setup.h>
 
@@ -174,22 +172,6 @@ void i2c_init_board(void)
 #endif
 }
 
-#if defined(CONFIG_ENV_IS_IN_MMC) && defined(CONFIG_ENV_IS_IN_FAT)
-enum env_location env_get_location(enum env_operation op, int prio)
-{
-	switch (prio) {
-	case 0:
-		return ENVL_FAT;
-
-	case 1:
-		return ENVL_MMC;
-
-	default:
-		return ENVL_UNKNOWN;
-	}
-}
-#endif
-
 /* add board specific code here */
 int board_init(void)
 {
@@ -234,8 +216,6 @@ int board_init(void)
 	satapwr_pin = sunxi_name_to_gpio(CONFIG_SATAPWR);
 	gpio_request(satapwr_pin, "satapwr");
 	gpio_direction_output(satapwr_pin, 1);
-	/* Give attached sata device time to power-up to avoid link timeouts */
-	mdelay(500);
 #endif
 #ifdef CONFIG_MACPWR
 	macpwr_pin = sunxi_name_to_gpio(CONFIG_MACPWR);
@@ -287,9 +267,10 @@ static void nand_clock_setup(void)
 		(struct sunxi_ccm_reg *)SUNXI_CCM_BASE;
 
 	setbits_le32(&ccm->ahb_gate0, (CLK_GATE_OPEN << AHB_GATE_OFFSET_NAND0));
-#if defined CONFIG_MACH_SUN6I || defined CONFIG_MACH_SUN8I || \
-    defined CONFIG_MACH_SUN9I || defined CONFIG_MACH_SUN50I
-	setbits_le32(&ccm->ahb_reset0_cfg, (1 << AHB_GATE_OFFSET_NAND0));
+#ifdef CONFIG_MACH_SUN9I
+	setbits_le32(&ccm->ahb_gate1, (1 << AHB_GATE_OFFSET_DMA));
+#else
+	setbits_le32(&ccm->ahb_gate0, (1 << AHB_GATE_OFFSET_DMA));
 #endif
 	setbits_le32(&ccm->nand0_clk_cfg, CCM_NAND_CTRL_ENABLE | AHB_DIV_1);
 }
@@ -510,6 +491,20 @@ int board_mmc_init(bd_t *bis)
 		return -1;
 #endif
 
+#if !defined(CONFIG_SPL_BUILD) && CONFIG_MMC_SUNXI_SLOT_EXTRA == 2
+	/*
+	 * On systems with an emmc (mmc2), figure out if we are booting from
+	 * the emmc and if we are make it "mmc dev 0" so that boot.scr, etc.
+	 * are searched there first. Note we only do this for u-boot proper,
+	 * not for the SPL, see spl_boot_device().
+	 */
+	if (readb(SPL_ADDR + 0x28) == SUNXI_BOOTED_FROM_MMC2) {
+		/* Booting from emmc / mmc2, swap */
+		mmc0->block_dev.devnum = 1;
+		mmc1->block_dev.devnum = 0;
+	}
+#endif
+
 	return 0;
 }
 #endif
@@ -601,7 +596,7 @@ int g_dnl_board_usb_cable_connected(void)
 	struct phy phy;
 	int ret;
 
-	ret = uclass_get_device(UCLASS_USB_DEV_GENERIC, 0, &dev);
+	ret = uclass_get_device(UCLASS_USB_GADGET_GENERIC, 0, &dev);
 	if (ret) {
 		pr_err("%s: Cannot find USB device\n", __func__);
 		return ret;
@@ -753,28 +748,21 @@ static void setup_environment(const void *fdt)
 int misc_init_r(void)
 {
 	__maybe_unused int ret;
-	uint boot;
 
 	env_set("fel_booted", NULL);
 	env_set("fel_scriptaddr", NULL);
-	env_set("mmc_bootdev", NULL);
-
-	boot = sunxi_get_boot_device();
 	/* determine if we are running in FEL mode */
-	if (boot == BOOT_DEVICE_BOARD) {
+	if (!is_boot0_magic(SPL_ADDR + 4)) { /* eGON.BT0 */
 		env_set("fel_booted", "1");
 		parse_spl_header(SPL_ADDR);
-	/* or if we booted from MMC, and which one */
-	} else if (boot == BOOT_DEVICE_MMC1) {
-		env_set("mmc_bootdev", "0");
-	} else if (boot == BOOT_DEVICE_MMC2) {
-		env_set("mmc_bootdev", "1");
 	}
 
 	setup_environment(gd->fdt_blob);
 
-#ifdef CONFIG_USB_ETHER
-	usb_ether_init();
+#ifndef CONFIG_MACH_SUN9I
+	ret = sunxi_usb_phy_probe();
+	if (ret)
+		return ret;
 #endif
 
 	return 0;

@@ -1,14 +1,14 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2017 Marek Behun <marek.behun@nic.cz>
  * Copyright (C) 2016 Tomas Hlavacek <tomas.hlavacek@nic.cz>
  *
  * Derived from the code for
  *   Marvell/db-88f6820-gp by Stefan Roese <sr@denx.de>
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
-#include <environment.h>
 #include <i2c.h>
 #include <miiphy.h>
 #include <netdev.h>
@@ -27,7 +27,7 @@
 # include <wdt.h>
 #endif
 
-#include "../drivers/ddr/marvell/a38x/ddr3_init.h"
+#include "../drivers/ddr/marvell/a38x/ddr3_a38x_topology.h"
 #include <../serdes/a38x/high_speed_env_spec.h>
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -200,8 +200,7 @@ static bool omnia_read_eeprom(struct omnia_eeprom *oep)
  * be used by the DDR3 init code in the SPL U-Boot version to configure
  * the DDR3 controller.
  */
-static struct mv_ddr_topology_map board_topology_map_1g = {
-	DEBUG_LEVEL_ERROR,
+static struct hws_topology_map board_topology_map_1g = {
 	0x1, /* active interfaces */
 	/* cs_mask, mirror, dqs_swap, ck_swap X PUPs */
 	{ { { {0x1, 0, 0, 0},
@@ -210,20 +209,17 @@ static struct mv_ddr_topology_map board_topology_map_1g = {
 	      {0x1, 0, 0, 0},
 	      {0x1, 0, 0, 0} },
 	    SPEED_BIN_DDR_1600K,	/* speed_bin */
-	    MV_DDR_DEV_WIDTH_16BIT,	/* memory_width */
-	    MV_DDR_DIE_CAP_4GBIT,			/* mem_size */
+	    BUS_WIDTH_16,		/* memory_width */
+	    MEM_4G,			/* mem_size */
 	    DDR_FREQ_800,		/* frequency */
-	    0, 0,			/* cas_wl cas_l */
-	    MV_DDR_TEMP_NORMAL,		/* temperature */
-	    MV_DDR_TIM_2T} },		/* timing */
-	BUS_MASK_32BIT,			/* Busses mask */
-	MV_DDR_CFG_DEFAULT,		/* ddr configuration data source */
-	{ {0} },			/* raw spd data */
-	{0}				/* timing parameters */
+	    0, 0,			/* cas_l cas_wl */
+	    HWS_TEMP_NORMAL,		/* temperature */
+	    HWS_TIM_2T} },		/* timing (force 2t) */
+	5,				/* Num Of Bus Per Interface*/
+	BUS_MASK_32BIT			/* Busses mask */
 };
 
-static struct mv_ddr_topology_map board_topology_map_2g = {
-	DEBUG_LEVEL_ERROR,
+static struct hws_topology_map board_topology_map_2g = {
 	0x1, /* active interfaces */
 	/* cs_mask, mirror, dqs_swap, ck_swap X PUPs */
 	{ { { {0x1, 0, 0, 0},
@@ -232,19 +228,17 @@ static struct mv_ddr_topology_map board_topology_map_2g = {
 	      {0x1, 0, 0, 0},
 	      {0x1, 0, 0, 0} },
 	    SPEED_BIN_DDR_1600K,	/* speed_bin */
-	    MV_DDR_DEV_WIDTH_16BIT,	/* memory_width */
-	    MV_DDR_DIE_CAP_8GBIT,			/* mem_size */
+	    BUS_WIDTH_16,		/* memory_width */
+	    MEM_8G,			/* mem_size */
 	    DDR_FREQ_800,		/* frequency */
-	    0, 0,			/* cas_wl cas_l */
-	    MV_DDR_TEMP_NORMAL,		/* temperature */
-	    MV_DDR_TIM_2T} },		/* timing */
-	BUS_MASK_32BIT,			/* Busses mask */
-	MV_DDR_CFG_DEFAULT,		/* ddr configuration data source */
-	{ {0} },			/* raw spd data */
-	{0}				/* timing parameters */
+	    0, 0,			/* cas_l cas_wl */
+	    HWS_TEMP_NORMAL,		/* temperature */
+	    HWS_TIM_2T} },		/* timing (force 2t) */
+	5,				/* Num Of Bus Per Interface*/
+	BUS_MASK_32BIT			/* Busses mask */
 };
 
-struct mv_ddr_topology_map *mv_ddr_topology_map_get(void)
+struct hws_topology_map *ddr3_get_topology_map(void)
 {
 	static int mem = 0;
 	struct omnia_eeprom oep;
@@ -321,11 +315,7 @@ int board_early_init_f(void)
 	writel(OMNIA_GPP_OUT_ENA_LOW, MVEBU_GPIO0_BASE + 0x04);
 	writel(OMNIA_GPP_OUT_ENA_MID, MVEBU_GPIO1_BASE + 0x04);
 
-	/*
-	 * Disable I2C debug mode blocking 0x64 I2C address.
-	 * Note: that would be redundant once Turris Omnia migrates to DM_I2C,
-	 * because the mvtwsi driver includes equivalent code.
-	 */
+	/* Disable I2C debug mode blocking 0x64 I2C address */
 	i2c_debug_reg = readl(MVEBU_TWSI_BASE + MVTWSI_ARMADA_DEBUG_REG);
 	i2c_debug_reg &= ~(1<<18);
 	writel(i2c_debug_reg, MVEBU_TWSI_BASE + MVTWSI_ARMADA_DEBUG_REG);

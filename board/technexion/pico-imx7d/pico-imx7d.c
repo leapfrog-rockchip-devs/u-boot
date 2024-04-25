@@ -1,6 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2017 NXP Semiconductors
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <asm/arch/clock.h>
@@ -58,7 +59,7 @@ static struct i2c_pads_info i2c_pad_info4 = {
 
 int dram_init(void)
 {
-	gd->ram_size = imx_ddr_size();
+	gd->ram_size = PHYS_SDRAM_SIZE;
 
 	return 0;
 }
@@ -181,7 +182,7 @@ static int setup_fec(void)
 			(IOMUXC_GPR_GPR1_GPR_ENET1_TX_CLK_SEL_MASK |
 			IOMUXC_GPR_GPR1_GPR_ENET1_CLK_DIR_MASK), 0);
 
-	return set_clk_enet(ENET_125MHZ);
+	return set_clk_enet(ENET_125MHz);
 }
 
 int board_phy_config(struct phy_device *phydev)
