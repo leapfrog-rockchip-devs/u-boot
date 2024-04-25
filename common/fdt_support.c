@@ -1,21 +1,30 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2007
  * Gerald Van Baren, Custom IDEAS, vanbaren@cideas.com
  *
  * Copyright 2010-2011 Freescale Semiconductor, Inc.
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
-#include <inttypes.h>
-#include <stdio_dev.h>
-#include <linux/ctype.h>
-#include <linux/types.h>
-#include <asm/global_data.h>
-#include <linux/libfdt.h>
-#include <fdt_support.h>
+#include <android_image.h>
 #include <exports.h>
+#include <fdt_support.h>
 #include <fdtdec.h>
+#include <inttypes.h>
+#include <malloc.h>
+#ifdef CONFIG_MTD_BLK
+#include <mtd_blk.h>
+#endif
+#include <stdio_dev.h>
+#include <asm/arch/hotkey.h>
+#include <asm/global_data.h>
+#include <linux/ctype.h>
+#include <linux/libfdt.h>
+#include <linux/types.h>
+
+DECLARE_GLOBAL_DATA_PTR;
 
 /**
  * fdt_getprop_u32_default_node - Return a node's property or a default
@@ -271,11 +280,82 @@ int fdt_initrd(void *fdt, ulong initrd_start, ulong initrd_end)
 	return 0;
 }
 
+int fdt_bootargs_append(void *fdt, char *data)
+{
+	const char *arr_bootargs[] = { "bootargs", "bootargs_ext" };
+	int nodeoffset, len;
+	const char *bootargs;
+	char *str;
+	int i, ret = 0;
+
+	if (!data)
+		return 0;
+
+	/* find or create "/chosen" node. */
+	nodeoffset = fdt_find_or_add_subnode(fdt, 0, "chosen");
+	if (nodeoffset < 0)
+		return nodeoffset;
+
+	for (i = 0; i < ARRAY_SIZE(arr_bootargs); i++) {
+		bootargs = fdt_getprop(fdt, nodeoffset,
+				       arr_bootargs[i], NULL);
+		if (bootargs) {
+			len = strlen(bootargs) + strlen(data) + 2;
+			str = malloc(len);
+			if (!str)
+				return -ENOMEM;
+
+			fdt_increase_size(fdt, strlen(data) + 1);
+			snprintf(str, len, "%s %s", bootargs, data);
+			ret = fdt_setprop(fdt, nodeoffset, "bootargs",
+					  str, len);
+			if (ret < 0)
+				printf("WARNING: could not set bootargs %s.\n", fdt_strerror(ret));
+
+			free(str);
+			break;
+		}
+	}
+
+	return ret;
+}
+
+int fdt_bootargs_append_ab(void *fdt, char *slot)
+{
+	char *str;
+	int len, ret = 0;
+
+	if (!slot)
+		return 0;
+
+	len = strlen(ANDROID_ARG_SLOT_SUFFIX) + strlen(slot) + 1;
+	str = malloc(len);
+	if (!str)
+		return -ENOMEM;
+
+	snprintf(str, len, "%s%s", ANDROID_ARG_SLOT_SUFFIX, slot);
+	ret = fdt_bootargs_append(fdt, str);
+	if (ret)
+		printf("Apend slot info to bootargs fail");
+
+	free(str);
+
+	return ret;
+}
+
 int fdt_chosen(void *fdt)
 {
+	/*
+	 * "bootargs_ext" is used when dtbo is applied.
+	 */
+	const char *arr_bootargs[] = { "bootargs", "bootargs_ext" };
 	int   nodeoffset;
 	int   err;
+	int   i;
 	char  *str;		/* used to set string properties */
+	int dump;
+
+	dump = is_hotkey(HK_CMDLINE);
 
 	err = fdt_check_header(fdt);
 	if (err < 0) {
@@ -290,6 +370,66 @@ int fdt_chosen(void *fdt)
 
 	str = env_get("bootargs");
 	if (str) {
+#ifdef CONFIG_ARCH_ROCKCHIP
+		const char *bootargs;
+
+		if (dump)
+			printf("## U-Boot bootargs: %s\n", str);
+
+		for (i = 0; i < ARRAY_SIZE(arr_bootargs); i++) {
+			bootargs = fdt_getprop(fdt, nodeoffset,
+					       arr_bootargs[i], NULL);
+			if (bootargs) {
+				if (dump)
+					printf("## Kernel %s: %s\n",
+					       arr_bootargs[i], bootargs);
+				/*
+				 * Append kernel bootargs
+				 * If use AB system, delete default "root=" which route
+				 * to rootfs. Then the ab bootctl will choose the
+				 * high priority system to boot and add its UUID
+				 * to cmdline. The format is "roo=PARTUUID=xxxx...".
+				 */
+				hotkey_run(HK_INITCALL);
+#ifdef CONFIG_ANDROID_AB
+				env_update_filter("bootargs", bootargs, "root=");
+#else
+				env_update("bootargs", bootargs);
+#endif
+#ifdef CONFIG_MTD_BLK
+				char *mtd_par_info = mtd_part_parse();
+
+				if (mtd_par_info) {
+					if (memcmp(env_get("devtype"), "mtd", 3) == 0)
+						env_update("bootargs", mtd_par_info);
+				}
+#endif
+				/*
+				 * Initrd fixup: remove unused "initrd=0x...,0x...",
+				 * this for compatible with legacy parameter.txt
+				 */
+				env_delete("bootargs", "initrd=", 0);
+
+				/*
+				 * If uart is required to be disabled during
+				 * power on, it would be not initialized by
+				 * any pre-loader and U-Boot.
+				 *
+				 * If we don't remove earlycon from commandline,
+				 * kernel hangs while using earlycon to putc/getc
+				 * which may dead loop for waiting uart status.
+				 * (It seems the root cause is baundrate is not
+				 * initilalized)
+				 *
+				 * So let's remove earlycon from commandline.
+				 */
+				if (gd->flags & GD_FLG_DISABLE_CONSOLE)
+					env_delete("bootargs", "earlycon=", 0);
+			}
+#endif
+		}
+
+		str = env_get("bootargs");
 		err = fdt_setprop(fdt, nodeoffset, "bootargs", str,
 				  strlen(str) + 1);
 		if (err < 0) {
@@ -298,6 +438,9 @@ int fdt_chosen(void *fdt)
 			return err;
 		}
 	}
+
+	if (dump)
+		printf("## Merged bootargs: %s\n", env_get("bootargs"));
 
 	return fdt_fixup_stdout(fdt, nodeoffset);
 }
@@ -409,11 +552,54 @@ static int fdt_pack_reg(const void *fdt, void *buf, u64 *address, u64 *size,
 	return p - (char *)buf;
 }
 
+int fdt_record_loadable(void *blob, u32 index, const char *name,
+			uintptr_t load_addr, u32 size, uintptr_t entry_point,
+			const char *type, const char *os)
+{
+	int err, node;
+
+	err = fdt_check_header(blob);
+	if (err < 0) {
+		printf("%s: %s\n", __func__, fdt_strerror(err));
+		return err;
+	}
+
+	/* find or create "/fit-images" node */
+	node = fdt_find_or_add_subnode(blob, 0, "fit-images");
+	if (node < 0)
+			return node;
+
+	/* find or create "/fit-images/<name>" node */
+	node = fdt_find_or_add_subnode(blob, node, name);
+	if (node < 0)
+		return node;
+
+	/*
+	 * We record these as 32bit entities, possibly truncating addresses.
+	 * However, spl_fit.c is not 64bit safe either: i.e. we should not
+	 * have an issue here.
+	 */
+	fdt_setprop_u32(blob, node, "load-addr", load_addr);
+	if (entry_point != -1)
+		fdt_setprop_u32(blob, node, "entry-point", entry_point);
+	fdt_setprop_u32(blob, node, "size", size);
+	if (type)
+		fdt_setprop_string(blob, node, "type", type);
+	if (os)
+		fdt_setprop_string(blob, node, "os", os);
+
+	return node;
+}
+
+#ifdef CONFIG_NR_DRAM_BANKS
+#define MEMORY_BANKS_MAX CONFIG_NR_DRAM_BANKS
+#else
 #define MEMORY_BANKS_MAX 4
+#endif
 int fdt_fixup_memory_banks(void *blob, u64 start[], u64 size[], int banks)
 {
 	int err, nodeoffset;
-	int len, i;
+	int len;
 	u8 tmp[MEMORY_BANKS_MAX * 16]; /* Up to 64-bit address + 64-bit size */
 
 	if (banks > MEMORY_BANKS_MAX) {
@@ -442,21 +628,8 @@ int fdt_fixup_memory_banks(void *blob, u64 start[], u64 size[], int banks)
 		return err;
 	}
 
-	for (i = 0; i < banks; i++) {
-		if (start[i] == 0 && size[i] == 0)
-			break;
-	}
-
-	banks = i;
-
 	if (!banks)
 		return 0;
-
-	for (i = 0; i < banks; i++)
-		if (start[i] == 0 && size[i] == 0)
-			break;
-
-	banks = i;
 
 	len = fdt_pack_reg(blob, tmp, start, size, banks);
 
@@ -468,12 +641,35 @@ int fdt_fixup_memory_banks(void *blob, u64 start[], u64 size[], int banks)
 	}
 	return 0;
 }
-#endif
 
 int fdt_fixup_memory(void *blob, u64 start, u64 size)
 {
 	return fdt_fixup_memory_banks(blob, &start, &size, 1);
 }
+
+int fdt_update_reserved_memory(void *blob, char *name, u64 start, u64 size)
+{
+	int nodeoffset, len, err;
+	u8 tmp[16]; /* Up to 64-bit address + 64-bit size */
+
+	nodeoffset = fdt_node_offset_by_compatible(blob, 0, name);
+	if (nodeoffset < 0)
+		debug("Can't find nodeoffset: %d\n", nodeoffset);
+
+	if (!size)
+		return nodeoffset;
+
+	len = fdt_pack_reg(blob, tmp, &start, &size, 1);
+	err = fdt_setprop(blob, nodeoffset, "reg", tmp, len);
+	if (err < 0) {
+		printf("WARNING: could not set %s %s.\n",
+				"reg", fdt_strerror(err));
+		return err;
+	}
+
+	return nodeoffset;
+}
+#endif
 
 void fdt_fixup_ethernet(void *fdt)
 {
@@ -551,45 +747,6 @@ void fdt_fixup_ethernet(void *fdt)
 					 &mac_addr, 6, 1);
 		}
 	}
-}
-
-int fdt_record_loadable(void *blob, u32 index, const char *name,
-			uintptr_t load_addr, u32 size, uintptr_t entry_point,
-			const char *type, const char *os)
-{
-	int err, node;
-
-	err = fdt_check_header(blob);
-	if (err < 0) {
-		printf("%s: %s\n", __func__, fdt_strerror(err));
-		return err;
-	}
-
-	/* find or create "/fit-images" node */
-	node = fdt_find_or_add_subnode(blob, 0, "fit-images");
-	if (node < 0)
-		return node;
-
-	/* find or create "/fit-images/<name>" node */
-	node = fdt_find_or_add_subnode(blob, node, name);
-	if (node < 0)
-		return node;
-
-	/*
-	 * We record these as 32bit entities, possibly truncating addresses.
-	 * However, spl_fit.c is not 64bit safe either: i.e. we should not
-	 * have an issue here.
-	 */
-	fdt_setprop_u32(blob, node, "load-addr", load_addr);
-	if (entry_point != -1)
-		fdt_setprop_u32(blob, node, "entry-point", entry_point);
-	fdt_setprop_u32(blob, node, "size", size);
-	if (type)
-		fdt_setprop_string(blob, node, "type", type);
-	if (os)
-		fdt_setprop_string(blob, node, "os", os);
-
-	return node;
 }
 
 /* Resize the fdt to its actual size + a bit of padding */
@@ -889,9 +1046,9 @@ err_prop:
  *
  *	fdt_fixup_mtdparts(blob, nodes, ARRAY_SIZE(nodes));
  */
-void fdt_fixup_mtdparts(void *blob, const struct node_info *node_info,
-			int node_info_size)
+void fdt_fixup_mtdparts(void *blob, void *node_info, int node_info_size)
 {
+	struct node_info *ni = node_info;
 	struct mtd_device *dev;
 	int i, idx;
 	int noff;
@@ -901,13 +1058,12 @@ void fdt_fixup_mtdparts(void *blob, const struct node_info *node_info,
 
 	for (i = 0; i < node_info_size; i++) {
 		idx = 0;
-		noff = fdt_node_offset_by_compatible(blob, -1,
-						     node_info[i].compat);
+		noff = fdt_node_offset_by_compatible(blob, -1, ni[i].compat);
 		while (noff != -FDT_ERR_NOTFOUND) {
 			debug("%s: %s, mtd dev type %d\n",
 				fdt_get_name(blob, noff, 0),
-				node_info[i].compat, node_info[i].type);
-			dev = device_find(node_info[i].type, idx++);
+				ni[i].compat, ni[i].type);
+			dev = device_find(ni[i].type, idx++);
 			if (dev) {
 				if (fdt_node_set_part_info(blob, noff, dev))
 					return; /* return on error */
@@ -915,7 +1071,7 @@ void fdt_fixup_mtdparts(void *blob, const struct node_info *node_info,
 
 			/* Jump to next flash node */
 			noff = fdt_node_offset_by_compatible(blob, noff,
-							     node_info[i].compat);
+							     ni[i].compat);
 		}
 	}
 }
