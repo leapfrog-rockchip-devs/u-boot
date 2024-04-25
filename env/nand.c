@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2000-2010
  * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
@@ -11,6 +10,8 @@
  *
  * (C) Copyright 2001 Sysgo Real-Time Solutions, GmbH <www.elinos.com>
  * Andreas Heppel <aheppel@sysgo.de>
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -319,7 +320,7 @@ static int env_nand_load(void)
 #if defined(ENV_IS_EMBEDDED)
 	return 0;
 #else
-	int read1_fail, read2_fail;
+	int read1_fail = 0, read2_fail = 0;
 	env_t *tmp_env1, *tmp_env2;
 	int ret = 0;
 
@@ -327,7 +328,7 @@ static int env_nand_load(void)
 	tmp_env2 = (env_t *)malloc(CONFIG_ENV_SIZE);
 	if (tmp_env1 == NULL || tmp_env2 == NULL) {
 		puts("Can't allocate buffers for environment\n");
-		set_default_env("malloc() failed", 0);
+		set_default_env("!malloc() failed");
 		ret = -EIO;
 		goto done;
 	}
@@ -335,8 +336,24 @@ static int env_nand_load(void)
 	read1_fail = readenv(CONFIG_ENV_OFFSET, (u_char *) tmp_env1);
 	read2_fail = readenv(CONFIG_ENV_OFFSET_REDUND, (u_char *) tmp_env2);
 
-	ret = env_import_redund((char *)tmp_env1, read1_fail, (char *)tmp_env2,
-				read2_fail);
+	if (read1_fail && read2_fail)
+		puts("*** Error - No Valid Environment Area found\n");
+	else if (read1_fail || read2_fail)
+		puts("*** Warning - some problems detected "
+		     "reading environment; recovered successfully\n");
+
+	if (read1_fail && read2_fail) {
+		set_default_env("!bad env area");
+		goto done;
+	} else if (!read1_fail && read2_fail) {
+		gd->env_valid = ENV_VALID;
+		env_import((char *)tmp_env1, 1);
+	} else if (read1_fail && !read2_fail) {
+		gd->env_valid = ENV_REDUND;
+		env_import((char *)tmp_env2, 1);
+	} else {
+		env_import_redund((char *)tmp_env1, (char *)tmp_env2);
+	}
 
 done:
 	free(tmp_env1);
@@ -366,18 +383,18 @@ static int env_nand_load(void)
 	if (mtd && !get_nand_env_oob(mtd, &nand_env_oob_offset)) {
 		printf("Found Environment offset in OOB..\n");
 	} else {
-		set_default_env("no env offset in OOB", 0);
+		set_default_env("!no env offset in OOB");
 		return;
 	}
 #endif
 
 	ret = readenv(CONFIG_ENV_OFFSET, (u_char *)buf);
 	if (ret) {
-		set_default_env("readenv() failed", 0);
+		set_default_env("!readenv() failed");
 		return -EIO;
 	}
 
-	return env_import(buf, 1);
+	env_import(buf, 1);
 #endif /* ! ENV_IS_EMBEDDED */
 
 	return 0;
