@@ -1,6 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2015  Masahiro Yamada <yamada.masahiro@socionext.com>
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -199,12 +200,6 @@ static int pinctrl_select_state_simple(struct udevice *dev)
 int pinctrl_select_state(struct udevice *dev, const char *statename)
 {
 	/*
-	 * Some device which is logical like mmc.blk, do not have
-	 * a valid ofnode.
-	 */
-	if (!ofnode_valid(dev->node))
-		return 0;
-	/*
 	 * Try full-implemented pinctrl first.
 	 * If it fails or is not implemented, try simple one.
 	 */
@@ -247,6 +242,16 @@ int pinctrl_get_gpio_mux(struct udevice *dev, int banknum, int index)
 		return -ENOSYS;
 
 	return ops->get_gpio_mux(dev, banknum, index);
+}
+
+int pinctrl_get_pins_count(struct udevice *dev)
+{
+	struct pinctrl_ops *ops = pinctrl_get_ops(dev);
+
+	if (!ops->get_pins_count)
+		return -ENOSYS;
+
+	return ops->get_pins_count(dev);
 }
 
 /**

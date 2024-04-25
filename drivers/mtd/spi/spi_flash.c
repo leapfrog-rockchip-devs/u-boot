@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * SPI Flash Core
  *
@@ -6,6 +5,8 @@
  * Copyright (C) 2013 Jagannadha Sutradharudu Teki, Xilinx Inc.
  * Copyright (C) 2010 Reinhard Meyer, EMK Elektronik
  * Copyright (C) 2008 Atmel Corporation
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -19,6 +20,8 @@
 #include <dma.h>
 
 #include "sf_internal.h"
+
+DECLARE_GLOBAL_DATA_PTR;
 
 static void spi_flash_addr(u32 addr, u8 *cmd)
 {
@@ -109,6 +112,18 @@ static int write_cr(struct spi_flash *flash, u8 wc)
 	return 0;
 }
 #endif
+
+int spi_flash_cmd_get_sw_write_prot(struct spi_flash *flash)
+{
+	u8 status;
+	int ret;
+
+	ret = read_sr(flash, &status);
+	if (ret)
+		return ret;
+
+	return (status >> 2) & 7;
+}
 
 #ifdef CONFIG_SPI_FLASH_BAR
 /*
@@ -468,17 +483,17 @@ int spi_flash_cmd_read_ops(struct spi_flash *flash, u32 offset,
 		size_t len, void *data)
 {
 	struct spi_slave *spi = flash->spi;
-	u8 *cmd, cmdsz;
+	u8 cmdsz;
 	u32 remain_len, read_len, read_addr;
 	int bank_sel = 0;
-	int ret = -1;
+	int ret = 0;
 
 	/* Handle memory-mapped SPI */
 	if (flash->memory_map) {
 		ret = spi_claim_bus(spi);
 		if (ret) {
 			debug("SF: unable to claim SPI bus\n");
-			return ret;
+			return log_ret(ret);
 		}
 		spi_xfer(spi, 0, NULL, NULL, SPI_XFER_MMAP);
 		spi_flash_copy_mmap(data, flash->memory_map + offset, len);
@@ -488,11 +503,7 @@ int spi_flash_cmd_read_ops(struct spi_flash *flash, u32 offset,
 	}
 
 	cmdsz = SPI_FLASH_CMD_LEN + flash->dummy_byte;
-	cmd = calloc(1, cmdsz);
-	if (!cmd) {
-		debug("SF: Failed to allocate cmd\n");
-		return -ENOMEM;
-	}
+	u8 cmd[cmdsz];
 
 	cmd[0] = flash->read_cmd;
 	while (len) {
@@ -505,7 +516,7 @@ int spi_flash_cmd_read_ops(struct spi_flash *flash, u32 offset,
 #ifdef CONFIG_SPI_FLASH_BAR
 		ret = write_bar(flash, read_addr);
 		if (ret < 0)
-			return ret;
+			return log_ret(ret);
 		bank_sel = flash->bank_curr;
 #endif
 		remain_len = ((SPI_FLASH_16MB_BOUN << flash->shift) *
@@ -535,8 +546,7 @@ int spi_flash_cmd_read_ops(struct spi_flash *flash, u32 offset,
 	ret = clean_bar(flash);
 #endif
 
-	free(cmd);
-	return ret;
+	return log_ret(ret);
 }
 
 #ifdef CONFIG_SPI_FLASH_SST
@@ -1000,7 +1010,7 @@ int stm_unlock(struct spi_flash *flash, u32 ofs, size_t len)
 #endif
 
 
-#ifdef CONFIG_SPI_FLASH_MACRONIX
+#if defined(CONFIG_SPI_FLASH_MACRONIX) || defined(CONFIG_SPI_FLASH_GIGADEVICE)
 static int macronix_quad_enable(struct spi_flash *flash)
 {
 	u8 qeb_status;
@@ -1085,8 +1095,9 @@ static int set_quad_mode(struct spi_flash *flash,
 			 const struct spi_flash_info *info)
 {
 	switch (JEDEC_MFR(info)) {
-#ifdef CONFIG_SPI_FLASH_MACRONIX
+#if defined(CONFIG_SPI_FLASH_MACRONIX) || defined(CONFIG_SPI_FLASH_GIGADEVICE)
 	case SPI_FLASH_CFI_MFR_MACRONIX:
+	case SPI_FLASH_CIF_MFR_GIGADEVICE:
 		return macronix_quad_enable(flash);
 #endif
 #if defined(CONFIG_SPI_FLASH_SPANSION) || defined(CONFIG_SPI_FLASH_WINBOND)
@@ -1096,6 +1107,7 @@ static int set_quad_mode(struct spi_flash *flash,
 #endif
 #ifdef CONFIG_SPI_FLASH_STMICRO
 	case SPI_FLASH_CFI_MFR_STMICRO:
+	case SPI_FLASH_CFI_MFR_MICRON:
 		debug("SF: QEB is volatile for %02x flash\n", JEDEC_MFR(info));
 		return 0;
 #endif
@@ -1183,6 +1195,7 @@ int spi_flash_scan(struct spi_flash *flash)
 #if defined(CONFIG_SPI_FLASH_STMICRO) || defined(CONFIG_SPI_FLASH_SST)
 	/* NOR protection support for STmicro/Micron chips and similar */
 	if (JEDEC_MFR(info) == SPI_FLASH_CFI_MFR_STMICRO ||
+	    JEDEC_MFR(info) == SPI_FLASH_CFI_MFR_MICRON ||
 	    JEDEC_MFR(info) == SPI_FLASH_CFI_MFR_SST) {
 		flash->flash_lock = stm_lock;
 		flash->flash_unlock = stm_unlock;

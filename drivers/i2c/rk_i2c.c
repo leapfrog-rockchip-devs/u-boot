@@ -1,9 +1,10 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2015 Google, Inc
  *
  * (C) Copyright 2008-2014 Rockchip Electronics
  * Peter, Software Engineering, <superpeter.cai@gmail.com>.
+ *
+ * SPDX-License-Identifier:     GPL-2.0+
  */
 
 #include <common.h>
@@ -18,6 +19,8 @@
 #include <dm/pinctrl.h>
 #include <linux/sizes.h>
 
+DECLARE_GLOBAL_DATA_PTR;
+
 /* i2c timerout */
 #define I2C_TIMEOUT_MS		100
 #define I2C_RETRY_COUNT		3
@@ -29,18 +32,6 @@ struct rk_i2c {
 	struct clk clk;
 	struct i2c_regs *regs;
 	unsigned int speed;
-};
-
-enum {
-	RK_I2C_LEGACY,
-	RK_I2C_NEW,
-};
-
-/**
- * @controller_type: i2c controller type
- */
-struct rk_i2c_soc_data {
-	int controller_type;
 };
 
 static inline void rk_i2c_get_div(int div, int *divh, int *divl)
@@ -157,6 +148,8 @@ static int rk_i2c_send_stop_bit(struct rk_i2c *i2c)
 
 static inline void rk_i2c_disable(struct rk_i2c *i2c)
 {
+	writel(0, &i2c->regs->ien);
+	writel(I2C_IPD_ALL_CLEAN, &i2c->regs->ipd);
 	writel(0, &i2c->regs->con);
 }
 
@@ -253,7 +246,6 @@ static int rk_i2c_read(struct rk_i2c *i2c, uchar chip, uint reg, uint r_len,
 	}
 
 i2c_exit:
-	rk_i2c_send_stop_bit(i2c);
 	rk_i2c_disable(i2c);
 
 	return err;
@@ -332,7 +324,6 @@ static int rk_i2c_write(struct rk_i2c *i2c, uchar chip, uint reg, uint r_len,
 	}
 
 i2c_exit:
-	rk_i2c_send_stop_bit(i2c);
 	rk_i2c_disable(i2c);
 
 	return err;
@@ -359,6 +350,9 @@ static int rockchip_i2c_xfer(struct udevice *bus, struct i2c_msg *msg,
 			return -EREMOTEIO;
 		}
 	}
+
+	rk_i2c_send_stop_bit(i2c);
+	rk_i2c_disable(i2c);
 
 	return 0;
 }
@@ -390,37 +384,8 @@ static int rockchip_i2c_ofdata_to_platdata(struct udevice *bus)
 static int rockchip_i2c_probe(struct udevice *bus)
 {
 	struct rk_i2c *priv = dev_get_priv(bus);
-	struct rk_i2c_soc_data *soc_data;
-	struct udevice *pinctrl;
-	int bus_nr;
-	int ret;
 
 	priv->regs = dev_read_addr_ptr(bus);
-
-	soc_data = (struct rk_i2c_soc_data*)dev_get_driver_data(bus);
-
-	if (soc_data->controller_type == RK_I2C_LEGACY) {
-		ret = dev_read_alias_seq(bus, &bus_nr);
-		if (ret < 0) {
-			debug("%s: Could not get alias for %s: %d\n",
-			 __func__, bus->name, ret);
-			return ret;
-		}
-
-		ret = uclass_get_device(UCLASS_PINCTRL, 0, &pinctrl);
-		if (ret) {
-			debug("%s: Cannot find pinctrl device\n", __func__);
-			return ret;
-		}
-
-		/* pinctrl will switch I2C to new type */
-		ret = pinctrl_request_noflags(pinctrl, PERIPH_ID_I2C0 + bus_nr);
-		if (ret) {
-			debug("%s: Failed to switch I2C to new type %s: %d\n",
-				__func__, bus->name, ret);
-			return ret;
-		}
-	}
 
 	return 0;
 }
@@ -430,55 +395,14 @@ static const struct dm_i2c_ops rockchip_i2c_ops = {
 	.set_bus_speed	= rockchip_i2c_set_bus_speed,
 };
 
-static const struct rk_i2c_soc_data rk3066_soc_data = {
-	.controller_type = RK_I2C_LEGACY,
-};
-
-static const struct rk_i2c_soc_data rk3188_soc_data = {
-	.controller_type = RK_I2C_LEGACY,
-};
-
-static const struct rk_i2c_soc_data rk3228_soc_data = {
-	.controller_type = RK_I2C_NEW,
-};
-
-static const struct rk_i2c_soc_data rk3288_soc_data = {
-	.controller_type = RK_I2C_NEW,
-};
-
-static const struct rk_i2c_soc_data rk3328_soc_data = {
-	.controller_type = RK_I2C_NEW,
-};
-
-static const struct rk_i2c_soc_data rk3399_soc_data = {
-	.controller_type = RK_I2C_NEW,
-};
-
 static const struct udevice_id rockchip_i2c_ids[] = {
-	{
-		.compatible = "rockchip,rk3066-i2c",
-		.data = (ulong)&rk3066_soc_data,
-	},
-	{
-		.compatible = "rockchip,rk3188-i2c",
-		.data = (ulong)&rk3188_soc_data,
-	},
-	{
-		.compatible = "rockchip,rk3228-i2c",
-		.data = (ulong)&rk3228_soc_data,
-	},
-	{
-		.compatible = "rockchip,rk3288-i2c",
-		.data = (ulong)&rk3288_soc_data,
-	},
-	{
-		.compatible = "rockchip,rk3328-i2c",
-		.data = (ulong)&rk3328_soc_data,
-	},
-	{
-		.compatible = "rockchip,rk3399-i2c",
-		.data = (ulong)&rk3399_soc_data,
-	},
+	{ .compatible = "rockchip,rk3066-i2c" },
+	{ .compatible = "rockchip,rk3188-i2c" },
+	{ .compatible = "rockchip,rk3288-i2c" },
+	{ .compatible = "rockchip,rk3328-i2c" },
+	{ .compatible = "rockchip,rk3399-i2c" },
+	{ .compatible = "rockchip,rk3228-i2c" },
+	{ .compatible = "rockchip,rv1108-i2c" },
 	{ }
 };
 

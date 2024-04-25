@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2009 Texas Instruments Incorporated - http://www.ti.com/
  *
@@ -6,6 +5,8 @@
  * by Atmel Corporation
  *
  * Copyright (C) 2007 Atmel Corporation
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>

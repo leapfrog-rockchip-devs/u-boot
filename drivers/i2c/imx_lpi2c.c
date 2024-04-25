@@ -1,6 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright 2016 Freescale Semiconductors, Inc.
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -8,17 +9,15 @@
 #include <asm/io.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/imx-regs.h>
-#include <imx_lpi2c.h>
+#include <asm/arch/imx_lpi2c.h>
 #include <asm/arch/sys_proto.h>
 #include <dm.h>
 #include <fdtdec.h>
 #include <i2c.h>
 
+DECLARE_GLOBAL_DATA_PTR;
 #define LPI2C_FIFO_SIZE 4
-#define LPI2C_NACK_TOUT_MS 1
 #define LPI2C_TIMEOUT_MS 100
-
-static int bus_i2c_init(struct udevice *bus, int speed);
 
 /* Weak linked function for overridden by some SoC power function */
 int __weak init_i2c_power(unsigned i2c_num)
@@ -93,9 +92,8 @@ static int bus_i2c_wait_for_tx_ready(struct imx_lpi2c_reg *regs)
 	return result;
 }
 
-static int bus_i2c_send(struct udevice *bus, u8 *txbuf, int len)
+static int bus_i2c_send(struct imx_lpi2c_reg *regs, u8 *txbuf, int len)
 {
-	struct imx_lpi2c_reg *regs = (struct imx_lpi2c_reg *)devfdt_get_addr(bus);
 	lpi2c_status_t result = LPI2C_SUCESS;
 
 	/* empty tx */
@@ -114,9 +112,8 @@ static int bus_i2c_send(struct udevice *bus, u8 *txbuf, int len)
 	return result;
 }
 
-static int bus_i2c_receive(struct udevice *bus, u8 *rxbuf, int len)
+static int bus_i2c_receive(struct imx_lpi2c_reg *regs, u8 *rxbuf, int len)
 {
-	struct imx_lpi2c_reg *regs = (struct imx_lpi2c_reg *)devfdt_get_addr(bus);
 	lpi2c_status_t result = LPI2C_SUCESS;
 	u32 val;
 	ulong start_time = get_timer(0);
@@ -157,24 +154,15 @@ static int bus_i2c_receive(struct udevice *bus, u8 *rxbuf, int len)
 	return result;
 }
 
-static int bus_i2c_start(struct udevice *bus, u8 addr, u8 dir)
+static int bus_i2c_start(struct imx_lpi2c_reg *regs, u8 addr, u8 dir)
 {
-	lpi2c_status_t result;
-	struct imx_lpi2c_reg *regs =
-		(struct imx_lpi2c_reg *)devfdt_get_addr(bus);
+	lpi2c_status_t result = LPI2C_SUCESS;
 	u32 val;
 
 	result = imx_lpci2c_check_busy_bus(regs);
 	if (result) {
 		debug("i2c: start check busy bus: 0x%x\n", result);
-
-		/* Try to init the lpi2c then check the bus busy again */
-		bus_i2c_init(bus, 100000);
-		result = imx_lpci2c_check_busy_bus(regs);
-		if (result) {
-			printf("i2c: Error check busy bus: 0x%x\n", result);
-			return result;
-		}
+		return result;
 	}
 	/* clear all status flags */
 	writel(0x7f00, &regs->msr);
@@ -194,13 +182,10 @@ static int bus_i2c_start(struct udevice *bus, u8 addr, u8 dir)
 	return result;
 }
 
-static int bus_i2c_stop(struct udevice *bus)
+static int bus_i2c_stop(struct imx_lpi2c_reg *regs)
 {
-	lpi2c_status_t result;
-	struct imx_lpi2c_reg *regs =
-		(struct imx_lpi2c_reg *)devfdt_get_addr(bus);
+	lpi2c_status_t result = LPI2C_SUCESS;
 	u32 status;
-	ulong start_time;
 
 	result = bus_i2c_wait_for_tx_ready(regs);
 	if (result) {
@@ -211,8 +196,7 @@ static int bus_i2c_stop(struct udevice *bus)
 	/* send stop command */
 	writel(LPI2C_MTDR_CMD(0x2), &regs->mtdr);
 
-	start_time = get_timer(0);
-	while (1) {
+	while (result == LPI2C_SUCESS) {
 		status = readl(&regs->msr);
 		result = imx_lpci2c_check_clear_error(regs);
 		/* stop detect flag */
@@ -222,38 +206,39 @@ static int bus_i2c_stop(struct udevice *bus)
 			writel(status, &regs->msr);
 			break;
 		}
-
-		if (get_timer(start_time) > LPI2C_NACK_TOUT_MS) {
-			debug("stop timeout\n");
-			return -ETIMEDOUT;
-		}
 	}
 
 	return result;
 }
 
-static int bus_i2c_read(struct udevice *bus, u32 chip, u8 *buf, int len)
+static int bus_i2c_read(struct imx_lpi2c_reg *regs, u32 chip, u8 *buf, int len)
 {
-	lpi2c_status_t result;
+	lpi2c_status_t result = LPI2C_SUCESS;
 
-	result = bus_i2c_start(bus, chip, 1);
+	result = bus_i2c_start(regs, chip, 1);
 	if (result)
 		return result;
-	result = bus_i2c_receive(bus, buf, len);
+	result = bus_i2c_receive(regs, buf, len);
+	if (result)
+		return result;
+	result = bus_i2c_stop(regs);
 	if (result)
 		return result;
 
 	return result;
 }
 
-static int bus_i2c_write(struct udevice *bus, u32 chip, u8 *buf, int len)
+static int bus_i2c_write(struct imx_lpi2c_reg *regs, u32 chip, u8 *buf, int len)
 {
-	lpi2c_status_t result;
+	lpi2c_status_t result = LPI2C_SUCESS;
 
-	result = bus_i2c_start(bus, chip, 0);
+	result = bus_i2c_start(regs, chip, 0);
 	if (result)
 		return result;
-	result = bus_i2c_send(bus, buf, len);
+	result = bus_i2c_send(regs, buf, len);
+	if (result)
+		return result;
+	result = bus_i2c_stop(regs);
 	if (result)
 		return result;
 
@@ -273,7 +258,7 @@ static int bus_i2c_set_bus_speed(struct udevice *bus, int speed)
 	int i;
 
 	regs = (struct imx_lpi2c_reg *)devfdt_get_addr(bus);
-	clock_rate = imx_get_i2cclk(bus->seq);
+	clock_rate = imx_get_i2cclk(bus->seq + 4);
 	if (!clock_rate)
 		return -EPERM;
 
@@ -368,32 +353,38 @@ static int bus_i2c_init(struct udevice *bus, int speed)
 static int imx_lpi2c_probe_chip(struct udevice *bus, u32 chip,
 				u32 chip_flags)
 {
-	lpi2c_status_t result;
+	struct imx_lpi2c_reg *regs;
+	lpi2c_status_t result = LPI2C_SUCESS;
 
-	result = bus_i2c_start(bus, chip, 0);
+	regs = (struct imx_lpi2c_reg *)devfdt_get_addr(bus);
+	result = bus_i2c_start(regs, chip, 0);
 	if (result) {
-		bus_i2c_stop(bus);
+		bus_i2c_stop(regs);
 		bus_i2c_init(bus, 100000);
 		return result;
 	}
 
-	result = bus_i2c_stop(bus);
-	if (result)
+	result = bus_i2c_stop(regs);
+	if (result) {
 		bus_i2c_init(bus, 100000);
+		return -result;
+	}
 
 	return result;
 }
 
 static int imx_lpi2c_xfer(struct udevice *bus, struct i2c_msg *msg, int nmsgs)
 {
-	int ret = 0, ret_stop;
+	struct imx_lpi2c_reg *regs;
+	int ret = 0;
 
+	regs = (struct imx_lpi2c_reg *)devfdt_get_addr(bus);
 	for (; nmsgs > 0; nmsgs--, msg++) {
 		debug("i2c_xfer: chip=0x%x, len=0x%x\n", msg->addr, msg->len);
 		if (msg->flags & I2C_M_RD)
-			ret = bus_i2c_read(bus, msg->addr, msg->buf, msg->len);
+			ret = bus_i2c_read(regs, msg->addr, msg->buf, msg->len);
 		else {
-			ret = bus_i2c_write(bus, msg->addr, msg->buf,
+			ret = bus_i2c_write(regs, msg->addr, msg->buf,
 					    msg->len);
 			if (ret)
 				break;
@@ -402,12 +393,6 @@ static int imx_lpi2c_xfer(struct udevice *bus, struct i2c_msg *msg, int nmsgs)
 
 	if (ret)
 		debug("i2c_write: error sending\n");
-
-	ret_stop = bus_i2c_stop(bus);
-	if (ret_stop)
-		debug("i2c_xfer: stop bus error\n");
-
-	ret |= ret_stop;
 
 	return ret;
 }
@@ -434,14 +419,14 @@ static int imx_lpi2c_probe(struct udevice *bus)
 	i2c_bus->bus = bus;
 
 	/* power up i2c resource */
-	ret = init_i2c_power(bus->seq);
+	ret = init_i2c_power(bus->seq + 4);
 	if (ret) {
 		debug("init_i2c_power err = %d\n", ret);
 		return ret;
 	}
 
-	/* To i.MX7ULP, only i2c4-7 can be handled by A7 core */
-	ret = enable_i2c_clk(1, bus->seq);
+	/* Enable clk, only i2c4-7 can be handled by A7 core */
+	ret = enable_i2c_clk(1, bus->seq + 4);
 	if (ret < 0)
 		return ret;
 
@@ -464,7 +449,6 @@ static const struct dm_i2c_ops imx_lpi2c_ops = {
 
 static const struct udevice_id imx_lpi2c_ids[] = {
 	{ .compatible = "fsl,imx7ulp-lpi2c", },
-	{ .compatible = "fsl,imx8qm-lpi2c", },
 	{}
 };
 

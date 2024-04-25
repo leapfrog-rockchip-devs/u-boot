@@ -1,6 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2007 Atmel Corporation
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 #include <common.h>
 #include <clk.h>
@@ -22,6 +23,8 @@
 #endif
 
 #include "atmel_spi.h"
+
+DECLARE_GLOBAL_DATA_PTR;
 
 #ifndef CONFIG_DM_SPI
 

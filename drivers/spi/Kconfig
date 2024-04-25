@@ -16,6 +16,13 @@ config DM_SPI
 	  typically use driver-private data instead of extending the
 	  spi_slave structure.
 
+config SPI_MEM
+	bool "SPI memory extension"
+	help
+	  Enable this option if you want to enable the SPI memory extension.
+	  This extension is meant to simplify interaction with SPI memories
+	  by providing an high-level interface to send memory-like commands.
+
 if DM_SPI
 
 config ALTERA_SPI
@@ -111,7 +118,6 @@ config ICH_SPI
 
 config MVEBU_A3700_SPI
 	bool "Marvell Armada 3700 SPI driver"
-	select CLK_ARMADA_3720
 	help
 	  Enable the Marvell Armada 3700 SPI driver. This driver can be
 	  used to access the SPI NOR flash on platforms embedding this
@@ -138,6 +144,14 @@ config ROCKCHIP_SPI
 	help
 	  Enable the Rockchip SPI driver, used to access SPI NOR flash and
 	  other SPI peripherals (such as the Chrome OS EC) on Rockchip SoCs.
+	  This uses driver model and requires a device tree binding to
+	  operate.
+
+config ROCKCHIP_SFC
+	bool "Rockchip SFC driver"
+	help
+	  Enable the Rockchip SFC driver, used to access SPI NOR flash
+	  on Rockchip SoCs.
 	  This uses driver model and requires a device tree binding to
 	  operate.
 
@@ -229,13 +243,6 @@ config ZYNQ_QSPI
 	  used to access the SPI NOR flash on platforms embedding this
 	  Zynq QSPI IP core. This IP is used to connect the flash in
 	  4-bit qspi, 8-bit dual stacked and shared 4-bit dual parallel.
-
-config ZYNQMP_GQSPI
-	bool "Configure ZynqMP Generic QSPI"
-	depends on ARCH_ZYNQMP
-	help
-	  This option is used to enable ZynqMP QSPI controller driver which
-	  is used to communicate with qspi flash devices.
 
 endif # if DM_SPI
 

@@ -1,15 +1,16 @@
-// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (c) 2015, Google, Inc
  * Written by Simon Glass <sjg@chromium.org>
  * All rights reserved.
+ *
+ * SPDX-License-Identifier:	GPL-2.0
  */
 
 #include <common.h>
 #include <dm.h>
 #include <pci.h>
 #include <usb.h>
-#include "xhci.h"
+#include <usb/xhci.h>
 
 static void xhci_pci_init(struct udevice *dev, struct xhci_hccr **ret_hccr,
 			  struct xhci_hcor **ret_hcor)

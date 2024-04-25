@@ -1,9 +1,10 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (c) 2013 Google, Inc
  *
  * (C) Copyright 2012
  * Pavel Herrmann <morpheus.ibis@gmail.com>
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -33,6 +34,9 @@ struct uclass *uclass_find(enum uclass_id key)
 	list_for_each_entry(uc, &gd->uclass_root, sibling_node) {
 		if (uc->uc_drv->id == key)
 			return uc;
+
+		if (uc->uc_drv->id == UCLASS_ROOT)
+			break;
 	}
 
 	return NULL;
@@ -256,7 +260,7 @@ int uclass_find_device_by_seq(enum uclass_id id, int seq_or_req_seq,
 	int ret;
 
 	*devp = NULL;
-	debug("%s: %d %d\n", __func__, find_req_seq, seq_or_req_seq);
+	pr_debug("%s: %d %d\n", __func__, find_req_seq, seq_or_req_seq);
 	if (seq_or_req_seq == -1)
 		return -ENODEV;
 	ret = uclass_get(id, &uc);
@@ -264,15 +268,15 @@ int uclass_find_device_by_seq(enum uclass_id id, int seq_or_req_seq,
 		return ret;
 
 	list_for_each_entry(dev, &uc->dev_head, uclass_node) {
-		debug("   - %d %d '%s'\n", dev->req_seq, dev->seq, dev->name);
+		pr_debug("   - %d %d '%s'\n", dev->req_seq, dev->seq, dev->name);
 		if ((find_req_seq ? dev->req_seq : dev->seq) ==
 				seq_or_req_seq) {
 			*devp = dev;
-			debug("   - found\n");
+			pr_debug("   - found\n");
 			return 0;
 		}
 	}
-	debug("   - not found\n");
+	pr_debug("   - not found\n");
 
 	return -ENODEV;
 }
@@ -308,7 +312,6 @@ int uclass_find_device_by_ofnode(enum uclass_id id, ofnode node,
 	struct udevice *dev;
 	int ret;
 
-	log(LOGC_DM, LOGL_DEBUG, "Looking for %s\n", ofnode_get_name(node));
 	*devp = NULL;
 	if (!ofnode_valid(node))
 		return -ENODEV;
@@ -317,19 +320,13 @@ int uclass_find_device_by_ofnode(enum uclass_id id, ofnode node,
 		return ret;
 
 	list_for_each_entry(dev, &uc->dev_head, uclass_node) {
-		log(LOGC_DM, LOGL_DEBUG_CONTENT, "      - checking %s\n",
-		    dev->name);
 		if (ofnode_equal(dev_ofnode(dev), node)) {
 			*devp = dev;
-			goto done;
+			return 0;
 		}
 	}
-	ret = -ENODEV;
 
-done:
-	log(LOGC_DM, LOGL_DEBUG, "   - result for %s: %s (ret=%d)\n",
-	    ofnode_get_name(node), *devp ? (*devp)->name : "(none)", ret);
-	return ret;
+	return -ENODEV;
 }
 
 #if CONFIG_IS_ENABLED(OF_CONTROL)
@@ -456,11 +453,8 @@ int uclass_get_device_by_ofnode(enum uclass_id id, ofnode node,
 	struct udevice *dev;
 	int ret;
 
-	log(LOGC_DM, LOGL_DEBUG, "Looking for %s\n", ofnode_get_name(node));
 	*devp = NULL;
 	ret = uclass_find_device_by_ofnode(id, node, &dev);
-	log(LOGC_DM, LOGL_DEBUG, "   - result for %s: %s (ret=%d)\n",
-	    ofnode_get_name(node), dev ? dev->name : "(none)", ret);
 
 	return uclass_get_device_tail(dev, ret, devp);
 }
@@ -478,6 +472,7 @@ int uclass_get_device_by_phandle_id(enum uclass_id id, uint phandle_id,
 	if (ret)
 		return ret;
 
+	ret = -ENODEV;
 	list_for_each_entry(dev, &uc->dev_head, uclass_node) {
 		uint phandle;
 
@@ -485,11 +480,12 @@ int uclass_get_device_by_phandle_id(enum uclass_id id, uint phandle_id,
 
 		if (phandle == phandle_id) {
 			*devp = dev;
-			return uclass_get_device_tail(dev, ret, devp);
+			ret = 0;
+			break;
 		}
 	}
 
-	return -ENODEV;
+	return uclass_get_device_tail(dev, ret, devp);
 }
 
 int uclass_get_device_by_phandle(enum uclass_id id, struct udevice *parent,
@@ -690,3 +686,8 @@ int uclass_pre_remove_device(struct udevice *dev)
 	return 0;
 }
 #endif
+
+UCLASS_DRIVER(nop) = {
+	.id		= UCLASS_NOP,
+	.name		= "nop",
+};

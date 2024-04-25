@@ -1,9 +1,10 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * Atmel PIO4 device driver
  *
  * Copyright (C) 2015 Atmel Corporation
  *		 Wenyou.Yang <wenyou.yang@atmel.com>
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 #include <common.h>
 #include <clk.h>
@@ -43,7 +44,7 @@ static struct atmel_pio4_port *atmel_pio4_port_base(u32 port)
 }
 
 static int atmel_pio4_config_io_func(u32 port, u32 pin,
-				     u32 func, u32 config)
+				     u32 func, u32 use_pullup)
 {
 	struct atmel_pio4_port *port_base;
 	u32 reg, mask;
@@ -57,7 +58,7 @@ static int atmel_pio4_config_io_func(u32 port, u32 pin,
 
 	mask = 1 << pin;
 	reg = func;
-	reg |= config;
+	reg |= use_pullup ? ATMEL_PIO_PUEN_MASK : 0;
 
 	writel(mask, &port_base->mskr);
 	writel(reg, &port_base->cfgr);
@@ -65,60 +66,60 @@ static int atmel_pio4_config_io_func(u32 port, u32 pin,
 	return 0;
 }
 
-int atmel_pio4_set_gpio(u32 port, u32 pin, u32 config)
+int atmel_pio4_set_gpio(u32 port, u32 pin, u32 use_pullup)
 {
 	return atmel_pio4_config_io_func(port, pin,
 					 ATMEL_PIO_CFGR_FUNC_GPIO,
-					 config);
+					 use_pullup);
 }
 
-int atmel_pio4_set_a_periph(u32 port, u32 pin, u32 config)
+int atmel_pio4_set_a_periph(u32 port, u32 pin, u32 use_pullup)
 {
 	return atmel_pio4_config_io_func(port, pin,
 					 ATMEL_PIO_CFGR_FUNC_PERIPH_A,
-					 config);
+					 use_pullup);
 }
 
-int atmel_pio4_set_b_periph(u32 port, u32 pin, u32 config)
+int atmel_pio4_set_b_periph(u32 port, u32 pin, u32 use_pullup)
 {
 	return atmel_pio4_config_io_func(port, pin,
 					 ATMEL_PIO_CFGR_FUNC_PERIPH_B,
-					 config);
+					 use_pullup);
 }
 
-int atmel_pio4_set_c_periph(u32 port, u32 pin, u32 config)
+int atmel_pio4_set_c_periph(u32 port, u32 pin, u32 use_pullup)
 {
 	return atmel_pio4_config_io_func(port, pin,
 					 ATMEL_PIO_CFGR_FUNC_PERIPH_C,
-					 config);
+					 use_pullup);
 }
 
-int atmel_pio4_set_d_periph(u32 port, u32 pin, u32 config)
+int atmel_pio4_set_d_periph(u32 port, u32 pin, u32 use_pullup)
 {
 	return atmel_pio4_config_io_func(port, pin,
 					 ATMEL_PIO_CFGR_FUNC_PERIPH_D,
-					 config);
+					 use_pullup);
 }
 
-int atmel_pio4_set_e_periph(u32 port, u32 pin, u32 config)
+int atmel_pio4_set_e_periph(u32 port, u32 pin, u32 use_pullup)
 {
 	return atmel_pio4_config_io_func(port, pin,
 					 ATMEL_PIO_CFGR_FUNC_PERIPH_E,
-					 config);
+					 use_pullup);
 }
 
-int atmel_pio4_set_f_periph(u32 port, u32 pin, u32 config)
+int atmel_pio4_set_f_periph(u32 port, u32 pin, u32 use_pullup)
 {
 	return atmel_pio4_config_io_func(port, pin,
 					 ATMEL_PIO_CFGR_FUNC_PERIPH_F,
-					 config);
+					 use_pullup);
 }
 
-int atmel_pio4_set_g_periph(u32 port, u32 pin, u32 config)
+int atmel_pio4_set_g_periph(u32 port, u32 pin, u32 use_pullup)
 {
 	return atmel_pio4_config_io_func(port, pin,
 					 ATMEL_PIO_CFGR_FUNC_PERIPH_G,
-					 config);
+					 use_pullup);
 }
 
 int atmel_pio4_set_pio_output(u32 port, u32 pin, u32 value)

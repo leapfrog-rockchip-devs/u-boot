@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * Device manager
  *
@@ -6,6 +5,8 @@
  *
  * (C) Copyright 2012
  * Pavel Herrmann <morpheus.ibis@gmail.com>
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -49,6 +50,59 @@ static int device_bind_common(struct udevice *parent, const struct driver *drv,
 		return ret;
 	}
 
+#ifdef CONFIG_USING_KERNEL_DTB
+	if (gd->flags & GD_FLG_RELOC) {
+		/* For mmc/nand/spiflash, just update from kernel dtb instead bind again*/
+		if (drv->id == UCLASS_MMC || drv->id == UCLASS_RKNAND ||
+		    drv->id == UCLASS_SPI_FLASH || drv->id == UCLASS_MTD ||
+		    drv->id == UCLASS_PCI || drv->id == UCLASS_AHCI) {
+			/*
+			 * Reject all mmc device from kernel.
+			 *
+			 * - we always follow the rule: use mmc device from U-Boot
+			 * - avoid alias id on defferent device between U-Boot and kernel
+			 */
+			if ((gd->flags & GD_FLG_KDTB_READY) &&
+			     (drv->id == UCLASS_MMC))
+				return 0;
+
+			list_for_each_entry(dev, &uc->dev_head, uclass_node) {
+				if (!strcmp(name, dev->name)) {
+					debug("%s do not bind dev already in list %s\n",
+					      __func__, dev->name);
+					/*
+					 * There is no clearly reason for this
+					 * legacy code, but remain it here since
+					 * everything seems fine with or without
+					 * this. Maybe removed in the future.
+					 */
+					dev->node = node;
+					return 0;
+				}
+			}
+		}
+
+		/* Use other nodes from kernel dtb */
+		struct udevice *n;
+
+		list_for_each_entry_safe(dev, n, &uc->dev_head, uclass_node) {
+			if (!strcmp(name, dev->name) &&
+			    (dev_read_bool(dev, "u-boot,dm-pre-reloc") ||
+			     dev_read_bool(dev, "u-boot,dm-spl"))) {
+
+				/* Always use these node from U-Boot dtb */
+				if (drv->id == UCLASS_CRYPTO ||
+				    drv->id == UCLASS_WDT) {
+					debug("%s do not delete uboot dev: %s\n",
+					      __func__, dev->name);
+					return 0;
+				} else {
+					list_del_init(&dev->uclass_node);
+				}
+			}
+		}
+	}
+#endif
 	dev = calloc(1, sizeof(struct udevice));
 	if (!dev)
 		return -ENOMEM;
@@ -230,14 +284,6 @@ int device_bind(struct udevice *parent, const struct driver *drv,
 				  offset_to_ofnode(of_offset), 0, devp);
 }
 
-int device_bind_ofnode(struct udevice *parent, const struct driver *drv,
-		       const char *name, void *platdata, ofnode node,
-		       struct udevice **devp)
-{
-	return device_bind_common(parent, drv, name, platdata, 0, node, 0,
-				  devp);
-}
-
 int device_bind_by_name(struct udevice *parent, bool pre_reloc_only,
 			const struct driver_info *info, struct udevice **devp)
 {
@@ -398,11 +444,6 @@ int device_probe(struct udevice *dev)
 		if (ret)
 			goto fail;
 	}
-
-	/* Process 'assigned-{clocks/clock-parents/clock-rates}' properties */
-	ret = clk_set_defaults(dev);
-	if (ret)
-		goto fail;
 
 	if (drv->probe) {
 		ret = drv->probe(dev);
@@ -716,7 +757,13 @@ int device_set_name(struct udevice *dev, const char *name)
 
 bool device_is_compatible(struct udevice *dev, const char *compat)
 {
-	return ofnode_device_is_compatible(dev_ofnode(dev), compat);
+	const void *fdt = gd->fdt_blob;
+	ofnode node = dev_ofnode(dev);
+
+	if (ofnode_is_np(node))
+		return of_device_is_compatible(ofnode_to_np(node), compat, NULL, NULL);
+	else
+		return !fdt_node_check_compatible(fdt, ofnode_to_offset(node), compat);
 }
 
 bool of_machine_is_compatible(const char *compat)

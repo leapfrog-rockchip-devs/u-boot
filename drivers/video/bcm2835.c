@@ -1,6 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2012 Stephen Warren
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -48,7 +49,6 @@ static int bcm2835_video_probe(struct udevice *dev)
 
 static const struct udevice_id bcm2835_video_ids[] = {
 	{ .compatible = "brcm,bcm2835-hdmi" },
-	{ .compatible = "brcm,bcm2708-fb" },
 	{ }
 };
 

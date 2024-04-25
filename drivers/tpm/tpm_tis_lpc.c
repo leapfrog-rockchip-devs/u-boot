@@ -1,6 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (c) 2011 The Chromium OS Authors.
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /*
@@ -15,7 +16,7 @@
 #include <common.h>
 #include <dm.h>
 #include <mapmem.h>
-#include <tpm-v1.h>
+#include <tpm.h>
 #include <asm/io.h>
 
 #define PREFIX "lpc_tpm: "

@@ -1,10 +1,11 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * PCI autoconfiguration library (legacy version, do not change)
  *
  * Author: Matt Porter <mporter@mvista.com>
  *
  * Copyright 2000 MontaVista Software Inc.
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -108,8 +109,7 @@ void pciauto_setup_device(struct pci_controller *hose,
 		}
 
 #ifndef CONFIG_PCI_ENUM_ONLY
-		if (pciauto_region_allocate(bar_res, bar_size,
-					    &bar_value, found_mem64) == 0) {
+		if (pciauto_region_allocate(bar_res, bar_size, &bar_value) == 0) {
 			/* Write it out and update our limit */
 			pci_hose_write_config_dword(hose, dev, bar, (u32)bar_value);
 
@@ -151,7 +151,7 @@ void pciauto_setup_device(struct pci_controller *hose,
 			debug("PCI Autoconfig: ROM, size=%#x, ",
 			      (unsigned int)bar_size);
 			if (pciauto_region_allocate(mem, bar_size,
-						    &bar_value, false) == 0) {
+						    &bar_value) == 0) {
 				pci_hose_write_config_dword(hose, dev, rom_addr,
 							    bar_value);
 			}

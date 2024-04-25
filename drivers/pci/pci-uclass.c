@@ -1,7 +1,8 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (c) 2014 Google, Inc
  * Written by Simon Glass <sjg@chromium.org>
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -517,64 +518,6 @@ int pci_auto_config_devices(struct udevice *bus)
 	return sub_bus;
 }
 
-int pci_generic_mmap_write_config(
-	struct udevice *bus,
-	int (*addr_f)(struct udevice *bus, pci_dev_t bdf, uint offset, void **addrp),
-	pci_dev_t bdf,
-	uint offset,
-	ulong value,
-	enum pci_size_t size)
-{
-	void *address;
-
-	if (addr_f(bus, bdf, offset, &address) < 0)
-		return 0;
-
-	switch (size) {
-	case PCI_SIZE_8:
-		writeb(value, address);
-		return 0;
-	case PCI_SIZE_16:
-		writew(value, address);
-		return 0;
-	case PCI_SIZE_32:
-		writel(value, address);
-		return 0;
-	default:
-		return -EINVAL;
-	}
-}
-
-int pci_generic_mmap_read_config(
-	struct udevice *bus,
-	int (*addr_f)(struct udevice *bus, pci_dev_t bdf, uint offset, void **addrp),
-	pci_dev_t bdf,
-	uint offset,
-	ulong *valuep,
-	enum pci_size_t size)
-{
-	void *address;
-
-	if (addr_f(bus, bdf, offset, &address) < 0) {
-		*valuep = pci_get_ff(size);
-		return 0;
-	}
-
-	switch (size) {
-	case PCI_SIZE_8:
-		*valuep = readb(address);
-		return 0;
-	case PCI_SIZE_16:
-		*valuep = readw(address);
-		return 0;
-	case PCI_SIZE_32:
-		*valuep = readl(address);
-		return 0;
-	default:
-		return -EINVAL;
-	}
-}
-
 int dm_pci_hose_probe_bus(struct udevice *bus)
 {
 	int sub_bus;
@@ -810,21 +753,19 @@ error:
 	return ret;
 }
 
-static void decode_regions(struct pci_controller *hose, ofnode parent_node,
-			   ofnode node)
+static int decode_regions(struct pci_controller *hose, ofnode parent_node,
+			  ofnode node)
 {
 	int pci_addr_cells, addr_cells, size_cells;
+	phys_addr_t base = 0, size;
 	int cells_per_record;
 	const u32 *prop;
 	int len;
 	int i;
 
 	prop = ofnode_get_property(node, "ranges", &len);
-	if (!prop) {
-		debug("%s: Cannot decode regions\n", __func__);
-		return;
-	}
-
+	if (!prop)
+		return -EINVAL;
 	pci_addr_cells = ofnode_read_simple_addr_cells(node);
 	addr_cells = ofnode_read_simple_addr_cells(parent_node);
 	size_cells = ofnode_read_simple_size_cells(node);
@@ -863,13 +804,6 @@ static void decode_regions(struct pci_controller *hose, ofnode parent_node,
 		} else {
 			continue;
 		}
-
-		if (!IS_ENABLED(CONFIG_SYS_PCI_64BIT) &&
-		    type == PCI_REGION_MEM && upper_32_bits(pci_addr)) {
-			debug(" - beyond the 32-bit boundary, ignoring\n");
-			continue;
-		}
-
 		pos = -1;
 		for (i = 0; i < hose->region_count; i++) {
 			if (hose->regions[i].flags == type)
@@ -882,41 +816,22 @@ static void decode_regions(struct pci_controller *hose, ofnode parent_node,
 	}
 
 	/* Add a region for our local memory */
-#ifdef CONFIG_NR_DRAM_BANKS
-	bd_t *bd = gd->bd;
-
-	if (!bd)
-		return;
-
-	for (i = 0; i < CONFIG_NR_DRAM_BANKS; ++i) {
-		if (bd->bi_dram[i].size) {
-			pci_set_region(hose->regions + hose->region_count++,
-				       bd->bi_dram[i].start,
-				       bd->bi_dram[i].start,
-				       bd->bi_dram[i].size,
-				       PCI_REGION_MEM | PCI_REGION_SYS_MEMORY);
-		}
-	}
-#else
-	phys_addr_t base = 0, size;
-
 	size = gd->ram_size;
 #ifdef CONFIG_SYS_SDRAM_BASE
 	base = CONFIG_SYS_SDRAM_BASE;
 #endif
 	if (gd->pci_ram_top && gd->pci_ram_top < base + size)
 		size = gd->pci_ram_top - base;
-	if (size)
-		pci_set_region(hose->regions + hose->region_count++, base,
-			base, size, PCI_REGION_MEM | PCI_REGION_SYS_MEMORY);
-#endif
+	pci_set_region(hose->regions + hose->region_count++, base, base,
+		       size, PCI_REGION_MEM | PCI_REGION_SYS_MEMORY);
 
-	return;
+	return 0;
 }
 
 static int pci_uclass_pre_probe(struct udevice *bus)
 {
 	struct pci_controller *hose;
+	int ret;
 
 	debug("%s, bus=%d/%s, parent=%s\n", __func__, bus->seq, bus->name,
 	      bus->parent->name);
@@ -925,7 +840,12 @@ static int pci_uclass_pre_probe(struct udevice *bus)
 	/* For bridges, use the top-level PCI controller */
 	if (!device_is_on_pci_bus(bus)) {
 		hose->ctlr = bus;
-		decode_regions(hose, dev_ofnode(bus->parent), dev_ofnode(bus));
+		ret = decode_regions(hose, dev_ofnode(bus->parent),
+				     dev_ofnode(bus));
+		if (ret) {
+			debug("%s: Cannot decode regions\n", __func__);
+			return ret;
+		}
 	} else {
 		struct pci_controller *parent_hose;
 
@@ -1182,11 +1102,6 @@ static int _dm_pci_bus_to_phys(struct udevice *ctlr,
 	struct pci_region *res;
 	int i;
 
-	if (hose->region_count == 0) {
-		*pa = bus_addr;
-		return 0;
-	}
-
 	for (i = 0; i < hose->region_count; i++) {
 		res = &hose->regions[i];
 
@@ -1249,11 +1164,6 @@ int _dm_pci_phys_to_bus(struct udevice *dev, phys_addr_t phys_addr,
 	/* The root controller has the region information */
 	ctlr = pci_get_controller(dev);
 	hose = dev_get_uclass_priv(ctlr);
-
-	if (hose->region_count == 0) {
-		*ba = phys_addr;
-		return 0;
-	}
 
 	for (i = 0; i < hose->region_count; i++) {
 		res = &hose->regions[i];

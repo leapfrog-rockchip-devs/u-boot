@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2016 Jagan Teki <jteki@openedev.com>
  *		      Christophe Ricard <christophe.ricard@gmail.com>
@@ -14,6 +13,8 @@
  * Copyright (C) 2005, 2006 Nokia Corporation
  *
  * Modified by Ruslan Araslanov <ruslan.araslanov@vitecmm.com>
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -443,6 +444,9 @@ static void spi_reset(struct mcspi *regs)
 static void _omap3_spi_claim_bus(struct omap3_spi_priv *priv)
 {
 	unsigned int conf;
+
+	spi_reset(priv->regs);
+
 	/*
 	 * setup when switching from (reset default) slave mode
 	 * to single-channel master mode
@@ -477,8 +481,6 @@ int spi_claim_bus(struct spi_slave *slave)
 {
 	struct omap3_spi_priv *priv = to_omap3_spi(slave);
 
-	spi_reset(priv->regs);
-
 	_omap3_spi_claim_bus(priv);
 	_omap3_spi_set_wordlen(priv);
 	_omap3_spi_set_mode(priv);
@@ -491,7 +493,8 @@ void spi_release_bus(struct spi_slave *slave)
 {
 	struct omap3_spi_priv *priv = to_omap3_spi(slave);
 
-	writel(OMAP3_MCSPI_MODULCTRL_MS, &priv->regs->modulctrl);
+	/* Reset the SPI hardware */
+	spi_reset(priv->regs);
 }
 
 struct spi_slave *spi_setup_slave(unsigned int bus, unsigned int cs,
@@ -588,8 +591,6 @@ static int omap3_spi_claim_bus(struct udevice *dev)
 	struct dm_spi_slave_platdata *slave_plat = dev_get_parent_platdata(dev);
 
 	priv->cs = slave_plat->cs;
-	priv->freq = slave_plat->max_hz;
-
 	_omap3_spi_claim_bus(priv);
 
 	return 0;
@@ -600,7 +601,8 @@ static int omap3_spi_release_bus(struct udevice *dev)
 	struct udevice *bus = dev->parent;
 	struct omap3_spi_priv *priv = dev_get_priv(bus);
 
-	writel(OMAP3_MCSPI_MODULCTRL_MS, &priv->regs->modulctrl);
+	/* Reset the SPI hardware */
+	spi_reset(priv->regs);
 
 	return 0;
 }
@@ -633,9 +635,6 @@ static int omap3_spi_probe(struct udevice *dev)
 	else
 		priv->pin_dir = MCSPI_PINDIR_D0_IN_D1_OUT;
 	priv->wordlen = SPI_DEFAULT_WORDLEN;
-
-	spi_reset(priv->regs);
-
 	return 0;
 }
 
@@ -650,10 +649,12 @@ static int omap3_spi_xfer(struct udevice *dev, unsigned int bitlen,
 
 static int omap3_spi_set_speed(struct udevice *dev, unsigned int speed)
 {
+	struct udevice *bus = dev->parent;
+	struct omap3_spi_priv *priv = dev_get_priv(bus);
+	struct dm_spi_slave_platdata *slave_plat = dev_get_parent_platdata(dev);
 
-	struct omap3_spi_priv *priv = dev_get_priv(dev);
-
-	priv->freq = speed;
+	priv->cs = slave_plat->cs;
+	priv->freq = slave_plat->max_hz;
 	_omap3_spi_set_speed(priv);
 
 	return 0;
@@ -661,10 +662,12 @@ static int omap3_spi_set_speed(struct udevice *dev, unsigned int speed)
 
 static int omap3_spi_set_mode(struct udevice *dev, uint mode)
 {
-	struct omap3_spi_priv *priv = dev_get_priv(dev);
+	struct udevice *bus = dev->parent;
+	struct omap3_spi_priv *priv = dev_get_priv(bus);
+	struct dm_spi_slave_platdata *slave_plat = dev_get_parent_platdata(dev);
 
-	priv->mode = mode;
-
+	priv->cs = slave_plat->cs;
+	priv->mode = slave_plat->mode;
 	_omap3_spi_set_mode(priv);
 
 	return 0;

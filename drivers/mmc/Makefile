@@ -1,7 +1,9 @@
-# SPDX-License-Identifier: GPL-2.0+
 #
 # (C) Copyright 2006
 # Wolfgang Denk, DENX Software Engineering, wd@denx.de.
+#
+# SPDX-License-Identifier:	GPL-2.0+
+#
 
 obj-y += mmc.o
 obj-$(CONFIG_$(SPL_)DM_MMC) += mmc-uclass.o
@@ -39,7 +41,6 @@ obj-$(CONFIG_SUPPORT_EMMC_RPMB) += rpmb.o
 obj-$(CONFIG_MMC_SANDBOX)		+= sandbox_mmc.o
 obj-$(CONFIG_SH_MMCIF) += sh_mmcif.o
 obj-$(CONFIG_SH_SDHI) += sh_sdhi.o
-obj-$(CONFIG_STM32_SDMMC2) += stm32_sdmmc2.o
 
 # SDHCI
 obj-$(CONFIG_MMC_SDHCI)			+= sdhci.o
@@ -61,6 +62,4 @@ obj-$(CONFIG_MMC_SDHCI_XENON)		+= xenon_sdhci.o
 obj-$(CONFIG_MMC_SDHCI_ZYNQ)		+= zynq_sdhci.o
 
 obj-$(CONFIG_MMC_SUNXI)			+= sunxi_mmc.o
-obj-$(CONFIG_MMC_UNIPHIER)		+= tmio-common.o uniphier-sd.o
-obj-$(CONFIG_RENESAS_SDHI)		+= tmio-common.o renesas-sdhi.o
-obj-$(CONFIG_MMC_BCM2835)		+= bcm2835_sdhost.o
+obj-$(CONFIG_MMC_UNIPHIER)		+= uniphier-sd.o

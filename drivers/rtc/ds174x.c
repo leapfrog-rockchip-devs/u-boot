@@ -1,9 +1,10 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2001
  * ARIO Data Networks, Inc. dchiu@ariodata.com
  *
  * Based on MontaVista DS1743 code and U-Boot mc146818 code
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /*
@@ -15,6 +16,8 @@
 #include <common.h>
 #include <command.h>
 #include <rtc.h>
+
+#if defined(CONFIG_CMD_DATE)
 
 static uchar rtc_read( unsigned int addr );
 static void  rtc_write( unsigned int addr, uchar val);
@@ -170,3 +173,5 @@ static void rtc_write( unsigned int addr, uchar val )
 #endif
 	out8( addr, val );
 }
+
+#endif

@@ -1,12 +1,15 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2015 - 2016 Xilinx, Inc.
  * Michal Simek <michal.simek@xilinx.com>
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 #include <common.h>
 #include <dm.h>
 #include <ahci.h>
 #include <scsi.h>
+#include <asm/arch/hardware.h>
+
 #include <asm/io.h>
 
 /* Vendor Specific Register Offsets */
@@ -16,7 +19,6 @@
 #define AHCI_VEND_PP3C  0xB0
 #define AHCI_VEND_PP4C  0xB4
 #define AHCI_VEND_PP5C  0xB8
-#define AHCI_VEND_AXICC 0xBc
 #define AHCI_VEND_PAXIC 0xC0
 #define AHCI_VEND_PTC   0xC8
 
@@ -71,105 +73,78 @@
 #define DRV_NAME	"ahci-ceva"
 #define CEVA_FLAG_BROKEN_GEN2	1
 
-/* flag bit definition */
-#define FLAG_COHERENT	1
-
-/* register config value */
-#define CEVA_PHY1_CFG	0xa003fffe
-#define CEVA_PHY2_CFG	0x28184d1f
-#define CEVA_PHY3_CFG	0x0e081509
-#define CEVA_TRANS_CFG	0x08000029
-#define CEVA_AXICC_CFG	0x3fffffff
-
-/* ecc addr-val pair */
-#define ECC_DIS_ADDR_CH2	0x80000000
-#define ECC_DIS_VAL_CH2	0x20140520
-
-enum ceva_soc {
-	CEVA_1V84,
-	CEVA_LS1012A,
-};
-
-struct ceva_sata_priv {
-	ulong base;
-	enum ceva_soc soc;
-	ulong flag;
-};
-
-static int ceva_init_sata(struct ceva_sata_priv *priv)
+static int ceva_init_sata(ulong mmio)
 {
-	ulong base = priv->base;
 	ulong tmp;
+	int i;
 
-	switch (priv->soc) {
-	case CEVA_1V84:
-		tmp = PAXIC_ADBW_BW64 | PAXIC_MAWIDD | PAXIC_MARIDD | PAXIC_OTL;
-		writel(tmp, base + AHCI_VEND_PAXIC);
-		tmp = PCFG_TPSS_VAL | PCFG_TPRS_VAL | PCFG_PAD_VAL;
-		writel(tmp, base + AHCI_VEND_PCFG);
+	/*
+	 * AXI Data bus width to 64
+	 * Set Mem Addr Read, Write ID for data transfers
+	 * Transfer limit to 72 DWord
+	 */
+	tmp = PAXIC_ADBW_BW64 | PAXIC_MAWIDD | PAXIC_MARIDD | PAXIC_OTL;
+	writel(tmp, mmio + AHCI_VEND_PAXIC);
+
+	/* Set AHCI Enable */
+	tmp = readl(mmio + HOST_CTL);
+	tmp |= HOST_AHCI_EN;
+	writel(tmp, mmio + HOST_CTL);
+
+	for (i = 0; i < NR_PORTS; i++) {
+		/* TPSS TPRS scalars, CISE and Port Addr */
+		tmp = PCFG_TPSS_VAL | PCFG_TPRS_VAL | (PCFG_PAD_VAL + i);
+		writel(tmp, mmio + AHCI_VEND_PCFG);
+
+		/* Port Phy Cfg register enables */
 		tmp = PPCFG_TTA | PPCFG_PSS_EN | PPCFG_ESDF_EN;
-		writel(tmp, base + AHCI_VEND_PPCFG);
+		writel(tmp, mmio + AHCI_VEND_PPCFG);
+
+		/* Rx Watermark setting  */
 		tmp = PTC_RX_WM_VAL | PTC_RSVD;
-		writel(tmp, base + AHCI_VEND_PTC);
-		break;
+		writel(tmp, mmio + AHCI_VEND_PTC);
 
-	case CEVA_LS1012A:
-		writel(ECC_DIS_ADDR_CH2, ECC_DIS_VAL_CH2);
-		writel(CEVA_PHY1_CFG, base + AHCI_VEND_PPCFG);
-		writel(CEVA_TRANS_CFG, base + AHCI_VEND_PTC);
-		if (priv->flag & FLAG_COHERENT)
-			writel(CEVA_AXICC_CFG, base + AHCI_VEND_AXICC);
-		break;
+		/* Default to Gen 2 Speed and Gen 1 if Gen2 is broken */
+		tmp = PORT_SCTL_SPD_GEN3 | PORT_SCTL_IPM;
+		writel(tmp, mmio + PORT_SCR_CTL + PORT_BASE + PORT_OFFSET * i);
 	}
-
 	return 0;
-}
-
-static int sata_ceva_bind(struct udevice *dev)
-{
-	struct udevice *scsi_dev;
-
-	return ahci_bind_scsi(dev, &scsi_dev);
 }
 
 static int sata_ceva_probe(struct udevice *dev)
 {
-	struct ceva_sata_priv *priv = dev_get_priv(dev);
+	struct scsi_platdata *plat = dev_get_uclass_platdata(dev);
 
-	ceva_init_sata(priv);
+	ceva_init_sata(plat->base);
 
-	return ahci_probe_scsi(dev, priv->base);
+	return achi_init_one_dm(dev);
 }
 
 static const struct udevice_id sata_ceva_ids[] = {
-	{ .compatible = "ceva,ahci-1v84", .data = CEVA_1V84 },
-	{ .compatible = "fsl,ls1012a-ahci", .data = CEVA_LS1012A },
+	{ .compatible = "ceva,ahci-1v84" },
 	{ }
 };
 
 static int sata_ceva_ofdata_to_platdata(struct udevice *dev)
 {
-	struct ceva_sata_priv *priv = dev_get_priv(dev);
+	struct scsi_platdata *plat = dev_get_uclass_platdata(dev);
 
-	if (dev_read_bool(dev, "dma-coherent"))
-		priv->flag |= FLAG_COHERENT;
-
-	priv->base = dev_read_addr(dev);
-	if (priv->base == FDT_ADDR_T_NONE)
+	plat->base = devfdt_get_addr(dev);
+	if (plat->base == FDT_ADDR_T_NONE)
 		return -EINVAL;
 
-	priv->soc = dev_get_driver_data(dev);
+	/* Hardcode number for ceva sata controller */
+	plat->max_lun = 1; /* Actually two but untested */
+	plat->max_id = 2;
 
 	return 0;
 }
 
 U_BOOT_DRIVER(ceva_host_blk) = {
 	.name = "ceva_sata",
-	.id = UCLASS_AHCI,
+	.id = UCLASS_SCSI,
 	.of_match = sata_ceva_ids,
-	.bind = sata_ceva_bind,
 	.ops = &scsi_ops,
-	.priv_auto_alloc_size = sizeof(struct ceva_sata_priv),
 	.probe = sata_ceva_probe,
 	.ofdata_to_platdata = sata_ceva_ofdata_to_platdata,
 };

@@ -1,8 +1,9 @@
-// SPDX-License-Identifier: GPL-2.0
 /*
  * SH SPI driver
  *
  * Copyright (C) 2011-2012 Renesas Solutions Corp.
+ *
+ * SPDX-License-Identifier:	GPL-2.0
  */
 
 #include <common.h>

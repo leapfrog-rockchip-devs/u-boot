@@ -1,9 +1,10 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (c) 2012 The Chromium OS Authors.
  *
  * TSC calibration codes are adapted from Linux kernel
  * arch/x86/kernel/tsc_msr.c and arch/x86/kernel/tsc.c
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -17,20 +18,9 @@
 #include <asm/msr.h>
 #include <asm/u-boot-x86.h>
 
-#define MAX_NUM_FREQS	9
+#define MAX_NUM_FREQS	8
 
 DECLARE_GLOBAL_DATA_PTR;
-
-static unsigned long cpu_mhz_from_cpuid(void)
-{
-	if (gd->arch.x86_vendor != X86_VENDOR_INTEL)
-		return 0;
-
-	if (cpuid_eax(0) < 0x16)
-		return 0;
-
-	return cpuid_eax(0x16);
-}
 
 /*
  * According to Intel 64 and IA-32 System Programming Guide,
@@ -50,20 +40,17 @@ struct freq_desc {
 
 static struct freq_desc freq_desc_tables[] = {
 	/* PNW */
-	{ 6, 0x27, 0, { 0, 0, 0, 0, 0, 99840, 0, 83200, 0 } },
+	{ 6, 0x27, 0, { 0, 0, 0, 0, 0, 99840, 0, 83200 } },
 	/* CLV+ */
-	{ 6, 0x35, 0, { 0, 133200, 0, 0, 0, 99840, 0, 83200, 0 } },
+	{ 6, 0x35, 0, { 0, 133200, 0, 0, 0, 99840, 0, 83200 } },
 	/* TNG - Intel Atom processor Z3400 series */
-	{ 6, 0x4a, 1, { 0, 100000, 133300, 0, 0, 0, 0, 0, 0 } },
+	{ 6, 0x4a, 1, { 0, 100000, 133300, 0, 0, 0, 0, 0 } },
 	/* VLV2 - Intel Atom processor E3000, Z3600, Z3700 series */
-	{ 6, 0x37, 1, { 83300, 100000, 133300, 116700, 80000, 0, 0, 0, 0 } },
+	{ 6, 0x37, 1, { 83300, 100000, 133300, 116700, 80000, 0, 0, 0 } },
 	/* ANN - Intel Atom processor Z3500 series */
-	{ 6, 0x5a, 1, { 83300, 100000, 133300, 100000, 0, 0, 0, 0, 0 } },
-	/* AMT - Intel Atom processor X7-Z8000 and X5-Z8000 series */
-	{ 6, 0x4c, 1, { 83300, 100000, 133300, 116700,
-			80000, 93300, 90000, 88900, 87500 } },
+	{ 6, 0x5a, 1, { 83300, 100000, 133300, 100000, 0, 0, 0, 0 } },
 	/* Ivybridge */
-	{ 6, 0x3a, 2, { 0, 0, 0, 0, 0, 0, 0, 0, 0 } },
+	{ 6, 0x3a, 2, { 0, 0, 0, 0, 0, 0, 0, 0 } },
 };
 
 static int match_cpu(u8 family, u8 model)
@@ -341,67 +328,30 @@ static int tsc_timer_get_count(struct udevice *dev, u64 *count)
 	return 0;
 }
 
-static void tsc_timer_ensure_setup(void)
+static int tsc_timer_probe(struct udevice *dev)
 {
-	if (gd->arch.tsc_base)
-		return;
+	struct timer_dev_priv *uc_priv = dev_get_uclass_priv(dev);
+
 	gd->arch.tsc_base = rdtsc();
 
 	/*
 	 * If there is no clock frequency specified in the device tree,
 	 * calibrate it by ourselves.
 	 */
-	if (!gd->arch.clock_rate) {
+	if (!uc_priv->clock_rate) {
 		unsigned long fast_calibrate;
 
-		fast_calibrate = cpu_mhz_from_cpuid();
-		if (fast_calibrate)
-			goto done;
-
 		fast_calibrate = cpu_mhz_from_msr();
-		if (fast_calibrate)
-			goto done;
+		if (!fast_calibrate) {
+			fast_calibrate = quick_pit_calibrate();
+			if (!fast_calibrate)
+				panic("TSC frequency is ZERO");
+		}
 
-		fast_calibrate = quick_pit_calibrate();
-		if (fast_calibrate)
-			goto done;
-
-		panic("TSC frequency is ZERO");
-
-done:
-		gd->arch.clock_rate = fast_calibrate * 1000000;
-	}
-}
-
-static int tsc_timer_probe(struct udevice *dev)
-{
-	struct timer_dev_priv *uc_priv = dev_get_uclass_priv(dev);
-
-	if (!uc_priv->clock_rate) {
-		tsc_timer_ensure_setup();
-		uc_priv->clock_rate = gd->arch.clock_rate;
-	} else {
-		gd->arch.tsc_base = rdtsc();
+		uc_priv->clock_rate = fast_calibrate * 1000000;
 	}
 
 	return 0;
-}
-
-unsigned long notrace timer_early_get_rate(void)
-{
-	/*
-	 * When TSC timer is used as the early timer, be warned that the timer
-	 * clock rate can only be calibrated via some hardware ways. Specifying
-	 * it in the device tree won't work for the early timer.
-	 */
-	tsc_timer_ensure_setup();
-
-	return gd->arch.clock_rate;
-}
-
-u64 notrace timer_early_get_count(void)
-{
-	return rdtsc() - gd->arch.tsc_base;
 }
 
 static const struct timer_ops tsc_timer_ops = {

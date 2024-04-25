@@ -1,7 +1,8 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2016 Atmel Corporation
  *               Wenyou.Yang <wenyou.yang@atmel.com>
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -26,7 +27,7 @@ static ulong sama5d4_h32mx_clk_get_rate(struct clk *clk)
 		rate /= 2;
 
 	if (rate > H32MX_MAX_FREQ)
-		dev_dbg(clk->dev, "H32MX clock is too fast\n");
+		dm_warn("H32MX clock is too fast\n");
 
 	return rate;
 }

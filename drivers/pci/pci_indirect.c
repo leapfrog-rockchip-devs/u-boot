@@ -1,13 +1,14 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * Support for indirect PCI bridges.
  *
  * Copyright (C) 1998 Gabriel Paubert.
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
 
-#if !defined(__I386__) && !defined(CONFIG_DM_PCI)
+#if !defined(__I386__)
 
 #include <asm/processor.h>
 #include <asm/io.h>

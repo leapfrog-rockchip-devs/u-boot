@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * PCI auto-configuration library
  *
@@ -9,6 +8,8 @@
  * Modifications for driver model:
  * Copyright 2015 Google, Inc
  * Written by Simon Glass <sjg@chromium.org>
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -32,12 +33,12 @@ void pciauto_region_align(struct pci_region *res, pci_size_t size)
 }
 
 int pciauto_region_allocate(struct pci_region *res, pci_size_t size,
-	pci_addr_t *bar, bool supports_64bit)
+	pci_addr_t *bar)
 {
 	pci_addr_t addr;
 
 	if (!res) {
-		debug("No resource\n");
+		debug("No resource");
 		goto error;
 	}
 
@@ -48,14 +49,9 @@ int pciauto_region_allocate(struct pci_region *res, pci_size_t size,
 		goto error;
 	}
 
-	if (upper_32_bits(addr) && !supports_64bit) {
-		debug("Cannot assign 64-bit address to 32-bit-only resource\n");
-		goto error;
-	}
-
 	res->bus_lower = addr + size;
 
-	debug("address=0x%llx bus_lower=0x%llx\n", (unsigned long long)addr,
+	debug("address=0x%llx bus_lower=0x%llx", (unsigned long long)addr,
 	      (unsigned long long)res->bus_lower);
 
 	*bar = addr;

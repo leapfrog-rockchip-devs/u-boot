@@ -1,12 +1,15 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2017 Texas Instruments Incorporated - http://www.ti.com/
  * Written by Jean-Jacques Hiblot  <jjhiblot@ti.com>
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
 #include <dm.h>
 #include <generic-phy.h>
+
+DECLARE_GLOBAL_DATA_PTR;
 
 static inline struct phy_ops *phy_dev_ops(struct udevice *dev)
 {
@@ -36,8 +39,8 @@ int generic_phy_get_by_index(struct udevice *dev, int index,
 {
 	struct ofnode_phandle_args args;
 	struct phy_ops *ops;
+	int ret;
 	struct udevice *phydev;
-	int i, ret;
 
 	debug("%s(dev=%p, index=%d, phy=%p)\n", __func__, dev, index, phy);
 
@@ -55,20 +58,7 @@ int generic_phy_get_by_index(struct udevice *dev, int index,
 	if (ret) {
 		debug("%s: uclass_get_device_by_ofnode failed: err=%d\n",
 		      __func__, ret);
-
-		/* Check if args.node's parent is a PHY provider */
-		ret = uclass_get_device_by_ofnode(UCLASS_PHY,
-						  ofnode_get_parent(args.node),
-						  &phydev);
-		if (ret)
-			return ret;
-
-		/* insert phy idx at first position into args array */
-		for (i = args.args_count; i > 1 ; i--)
-			args.args[i] = args.args[i - 1];
-
-		args.args_count++;
-		args.args[0] = ofnode_read_u32_default(args.node, "reg", -1);
+		return ret;
 	}
 
 	phy->dev = phydev;
@@ -108,37 +98,80 @@ int generic_phy_get_by_name(struct udevice *dev, const char *phy_name,
 
 int generic_phy_init(struct phy *phy)
 {
-	struct phy_ops const *ops = phy_dev_ops(phy->dev);
+	struct phy_ops const *ops;
+
+	if (!generic_phy_valid(phy))
+		return 0;
+	ops = phy_dev_ops(phy->dev);
 
 	return ops->init ? ops->init(phy) : 0;
 }
 
 int generic_phy_reset(struct phy *phy)
 {
-	struct phy_ops const *ops = phy_dev_ops(phy->dev);
+	struct phy_ops const *ops;
+
+	if (!generic_phy_valid(phy))
+		return 0;
+	ops = phy_dev_ops(phy->dev);
 
 	return ops->reset ? ops->reset(phy) : 0;
 }
 
 int generic_phy_exit(struct phy *phy)
 {
-	struct phy_ops const *ops = phy_dev_ops(phy->dev);
+	struct phy_ops const *ops;
+
+	if (!generic_phy_valid(phy))
+		return 0;
+	ops = phy_dev_ops(phy->dev);
 
 	return ops->exit ? ops->exit(phy) : 0;
 }
 
 int generic_phy_power_on(struct phy *phy)
 {
-	struct phy_ops const *ops = phy_dev_ops(phy->dev);
+	struct phy_ops const *ops;
+
+	if (!generic_phy_valid(phy))
+		return 0;
+	ops = phy_dev_ops(phy->dev);
 
 	return ops->power_on ? ops->power_on(phy) : 0;
 }
 
 int generic_phy_power_off(struct phy *phy)
 {
-	struct phy_ops const *ops = phy_dev_ops(phy->dev);
+	struct phy_ops const *ops;
+
+	if (!generic_phy_valid(phy))
+		return 0;
+	ops = phy_dev_ops(phy->dev);
 
 	return ops->power_off ? ops->power_off(phy) : 0;
+}
+
+int generic_phy_configure(struct phy *phy, union phy_configure_opts *opts)
+{
+	struct phy_ops const *ops;
+
+	if (!generic_phy_valid(phy))
+		return 0;
+	ops = phy_dev_ops(phy->dev);
+
+	return ops->configure ? ops->configure(phy, opts) : 0;
+}
+
+int generic_phy_validate(struct phy *phy, enum phy_mode mode, int submode,
+			 union phy_configure_opts *opts)
+{
+	struct phy_ops const *ops;
+
+	if (!generic_phy_valid(phy))
+		return 0;
+	ops = phy_dev_ops(phy->dev);
+
+	return ops->validate ? ops->validate(phy, mode, submode, opts) : 0;
 }
 
 UCLASS_DRIVER(phy) = {

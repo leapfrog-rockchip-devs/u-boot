@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * Xilinx Zynq GPIO device driver
  *
@@ -6,6 +5,8 @@
  *
  * Most of code taken from linux kernel driver (linux/drivers/gpio/gpio-zynq.c)
  * Copyright (C) 2009 - 2014 Xilinx, Inc.
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -14,6 +15,8 @@
 #include <linux/errno.h>
 #include <dm.h>
 #include <fdtdec.h>
+
+DECLARE_GLOBAL_DATA_PTR;
 
 /* Maximum banks */
 #define ZYNQ_GPIO_MAX_BANK	4
@@ -109,9 +112,9 @@ struct zynq_gpio_privdata {
 struct zynq_platform_data {
 	const char *label;
 	u16 ngpio;
-	u32 max_bank;
-	u32 bank_min[ZYNQMP_GPIO_MAX_BANK];
-	u32 bank_max[ZYNQMP_GPIO_MAX_BANK];
+	int max_bank;
+	int bank_min[ZYNQMP_GPIO_MAX_BANK];
+	int bank_max[ZYNQMP_GPIO_MAX_BANK];
 };
 
 static const struct zynq_platform_data zynqmp_gpio_def = {
@@ -163,7 +166,7 @@ static inline void zynq_gpio_get_bank_pin(unsigned int pin_num,
 					  struct udevice *dev)
 {
 	struct zynq_gpio_privdata *priv = dev_get_priv(dev);
-	u32 bank;
+	int bank;
 
 	for (bank = 0; bank < priv->p_data->max_bank; bank++) {
 		if ((pin_num >= priv->p_data->bank_min[bank]) &&
@@ -176,7 +179,7 @@ static inline void zynq_gpio_get_bank_pin(unsigned int pin_num,
 	}
 
 	if (bank >= priv->p_data->max_bank) {
-		printf("Invalid bank and pin num\n");
+		printf("Inavlid bank and pin num\n");
 		*bank_num = 0;
 		*bank_pin_num = 0;
 	}
@@ -186,7 +189,7 @@ static int gpio_is_valid(unsigned gpio, struct udevice *dev)
 {
 	struct zynq_gpio_privdata *priv = dev_get_priv(dev);
 
-	return gpio < priv->p_data->ngpio;
+	return (gpio >= 0) && (gpio < priv->p_data->ngpio);
 }
 
 static int check_gpio(unsigned gpio, struct udevice *dev)
@@ -332,12 +335,35 @@ static const struct udevice_id zynq_gpio_ids[] = {
 	{ }
 };
 
+static void zynq_gpio_getplat_data(struct udevice *dev)
+{
+	const struct udevice_id *of_match = zynq_gpio_ids;
+	int ret;
+	struct zynq_gpio_privdata *priv = dev_get_priv(dev);
+
+	while (of_match->compatible) {
+		ret = fdt_node_offset_by_compatible(gd->fdt_blob, -1,
+						    of_match->compatible);
+		if (ret >= 0) {
+			priv->p_data =
+				    (struct zynq_platform_data *)of_match->data;
+			break;
+		} else  {
+			of_match++;
+			continue;
+		}
+	}
+
+	if (!priv->p_data)
+		printf("No Platform data found\n");
+}
+
 static int zynq_gpio_probe(struct udevice *dev)
 {
 	struct zynq_gpio_privdata *priv = dev_get_priv(dev);
 	struct gpio_dev_priv *uc_priv = dev_get_uclass_priv(dev);
 
-	uc_priv->bank_name = dev->name;
+	zynq_gpio_getplat_data(dev);
 
 	if (priv->p_data)
 		uc_priv->gpio_count = priv->p_data->ngpio;
@@ -349,9 +375,7 @@ static int zynq_gpio_ofdata_to_platdata(struct udevice *dev)
 {
 	struct zynq_gpio_privdata *priv = dev_get_priv(dev);
 
-	priv->base = (phys_addr_t)dev_read_addr(dev);
-
-	priv->p_data = (struct zynq_platform_data *)dev_get_driver_data(dev);
+	priv->base = devfdt_get_addr(dev);
 
 	return 0;
 }

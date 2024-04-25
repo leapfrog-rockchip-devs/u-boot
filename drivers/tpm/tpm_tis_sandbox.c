@@ -1,11 +1,12 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (c) 2013 Google, Inc
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
 #include <dm.h>
-#include <tpm-v1.h>
+#include <tpm.h>
 #include <asm/state.h>
 #include <asm/unaligned.h>
 #include <linux/crc8.h>

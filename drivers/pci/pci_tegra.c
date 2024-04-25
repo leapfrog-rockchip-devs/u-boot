@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (c) 2010, CompuLab, Ltd.
  * Author: Mike Rapoport <mike@compulab.co.il>
@@ -7,6 +6,8 @@
  * Copyright (c) 2008-2009, NVIDIA Corporation.
  *
  * Copyright (c) 2013-2014, NVIDIA Corporation.
+ *
+ * SPDX-License-Identifier:	GPL-2.0
  */
 
 #define pr_fmt(fmt) "tegra-pcie: " fmt
@@ -17,7 +18,6 @@
 #include <errno.h>
 #include <malloc.h>
 #include <pci.h>
-#include <pci_tegra.h>
 #include <power-domain.h>
 #include <reset.h>
 
@@ -42,6 +42,8 @@
  * fixed to implement the standard APIs, and all drivers converted to solely
  * use the new standard APIs, with no ifdefs.
  */
+
+DECLARE_GLOBAL_DATA_PTR;
 
 #define AFI_AXI_BAR0_SZ	0x00
 #define AFI_AXI_BAR1_SZ	0x04
@@ -216,6 +218,8 @@ struct tegra_pcie_soc {
 };
 
 struct tegra_pcie {
+	struct pci_controller hose;
+
 	struct resource pads;
 	struct resource afi;
 	struct resource cs;
@@ -889,7 +893,7 @@ static unsigned long tegra_pcie_port_get_pex_ctrl(struct tegra_pcie_port *port)
 	return ret;
 }
 
-void tegra_pcie_port_reset(struct tegra_pcie_port *port)
+static void tegra_pcie_port_reset(struct tegra_pcie_port *port)
 {
 	unsigned long ctrl = tegra_pcie_port_get_pex_ctrl(port);
 	unsigned long value;
@@ -904,16 +908,6 @@ void tegra_pcie_port_reset(struct tegra_pcie_port *port)
 	value = afi_readl(port->pcie, ctrl);
 	value |= AFI_PEX_CTRL_RST;
 	afi_writel(port->pcie, value, ctrl);
-}
-
-int tegra_pcie_port_index_of_port(struct tegra_pcie_port *port)
-{
-	return port->index;
-}
-
-void __weak tegra_pcie_board_port_reset(struct tegra_pcie_port *port)
-{
-	tegra_pcie_port_reset(port);
 }
 
 static void tegra_pcie_port_enable(struct tegra_pcie_port *port)
@@ -934,7 +928,7 @@ static void tegra_pcie_port_enable(struct tegra_pcie_port *port)
 
 	afi_writel(pcie, value, ctrl);
 
-	tegra_pcie_board_port_reset(port);
+	tegra_pcie_port_reset(port);
 
 	if (soc->force_pca_enable) {
 		value = rp_readl(port, RP_VEND_CTL2);
@@ -985,7 +979,7 @@ static bool tegra_pcie_port_check_link(struct tegra_pcie_port *port)
 		} while (--timeout);
 
 retry:
-		tegra_pcie_board_port_reset(port);
+		tegra_pcie_port_reset(port);
 	} while (--retries);
 
 	return false;

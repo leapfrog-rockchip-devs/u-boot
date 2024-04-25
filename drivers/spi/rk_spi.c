@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * spi driver for rockchip
  *
@@ -6,6 +5,8 @@
  *
  * (C) Copyright 2008-2013 Rockchip Electronics
  * Peter, Software Engineering, <superpeter.cai@gmail.com>.
+ *
+ * SPDX-License-Identifier:     GPL-2.0+
  */
 
 #include <common.h>
@@ -20,6 +21,8 @@
 #include <asm/arch/periph.h>
 #include <dm/pinctrl.h>
 #include "rk_spi.h"
+
+DECLARE_GLOBAL_DATA_PTR;
 
 /* Change to 1 to output registers at the start of each transaction */
 #define DEBUG_RK_SPI	0
@@ -450,6 +453,8 @@ static const struct udevice_id rockchip_spi_ids[] = {
 	{ .compatible = "rockchip,rk3288-spi" },
 	{ .compatible = "rockchip,rk3368-spi" },
 	{ .compatible = "rockchip,rk3399-spi" },
+	{ .compatible = "rockchip,rk3066-spi" },
+	{ .compatible = "rockchip,rk3328-spi" },
 	{ }
 };
 

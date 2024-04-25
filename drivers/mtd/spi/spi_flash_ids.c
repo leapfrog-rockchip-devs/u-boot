@@ -1,9 +1,10 @@
-// SPDX-License-Identifier: GPL-2.0+
 /*
  * SPI Flash ID's.
  *
  * Copyright (C) 2016 Jagan Teki <jagan@openedev.com>
  * Copyright (C) 2013 Jagannadha Sutradharudu Teki, Xilinx Inc.
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -66,6 +67,7 @@ const struct spi_flash_info spi_flash_ids[] = {
 	{"gd25q64b",	   INFO(0xc84017, 0x0, 64 * 1024,   128, SECT_4K) },
 	{"gd25q32b",       INFO(0xc84016, 0x0, 64 * 1024,    64, SECT_4K) },
 	{"gd25lq32",	   INFO(0xc86016, 0x0, 64 * 1024,    64, SECT_4K) },
+	{"GD25Q256",       INFO(0xc84019, 0x0, 64 * 1024,   512, RD_FULL | WR_QPP | SECT_4K)},
 #endif
 #ifdef CONFIG_SPI_FLASH_ISSI		/* ISSI */
 	{"is25lq040b",	   INFO(0x9d4013, 0x0, 64 * 1024,    8, 0)  },
@@ -109,6 +111,7 @@ const struct spi_flash_info spi_flash_ids[] = {
 	{"s25fl064p",	   INFO(0x010216, 0x4d00,  64 * 1024,   128, RD_FULL | WR_QPP) },
 	{"s25fl128s_256k", INFO(0x012018, 0x4d00, 256 * 1024,    64, RD_FULL | WR_QPP) },
 	{"s25fl128s_64k",  INFO(0x012018, 0x4d01,  64 * 1024,   256, RD_FULL | WR_QPP) },
+	{"s25fl128l",      INFO(0x016018, 0, 64 * 1024,    256, RD_FULL | WR_QPP) },
 	{"s25fl256s_256k", INFO(0x010219, 0x4d00, 256 * 1024,   128, RD_FULL | WR_QPP) },
 	{"s25fs256s_64k",  INFO6(0x010219, 0x4d0181, 64 * 1024, 512, RD_FULL | WR_QPP | SECT_4K) },
 	{"s25fl256s_64k",  INFO(0x010219, 0x4d01,  64 * 1024,   512, RD_FULL | WR_QPP) },
@@ -187,6 +190,10 @@ const struct spi_flash_info spi_flash_ids[] = {
 	{"w25q128jv",	   INFO(0xef7018, 0x0,	64 * 1024,   256, RD_FULL | WR_QPP | SECT_4K) },
 	{"w25q256fw",	   INFO(0xef6019, 0x0,	64 * 1024,   512, RD_FULL | WR_QPP | SECT_4K) },
 	{"w25q256jw",	   INFO(0xef7019, 0x0,	64 * 1024,   512, RD_FULL | WR_QPP | SECT_4K) },
+#endif
+#ifdef CONFIG_SPI_FLASH_XMC /* Wuhan Xinxin Semiconductor Manufacturing Corp */
+	{ "xm25qh64a",	   INFO(0x207017, 0x0, 64 * 1024,    128, SECT_4K | RD_DUAL | RD_QUAD) },
+	{ "xm25qh128a",	   INFO(0x207018, 0x0, 64 * 1024,    256, SECT_4K | RD_DUAL | RD_QUAD) },
 #endif
 	{},	/* Empty entry to terminate the list */
 	/*
