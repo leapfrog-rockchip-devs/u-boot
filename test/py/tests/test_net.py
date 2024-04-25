@@ -1,5 +1,6 @@
-# SPDX-License-Identifier: GPL-2.0
 # Copyright (c) 2016, NVIDIA CORPORATION. All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0
 
 # Test various network-related functionality, such as the dhcp, ping, and
 # tftpboot commands.
@@ -146,7 +147,7 @@ def test_net_tftpboot(u_boot_console):
 
     addr = f.get('addr', None)
     if not addr:
-        addr = u_boot_utils.find_ram_base(u_boot_console)
+        addr = u_boot_utils.find_ram_base(u_boot_console) + (1024 * 1024 * 4)
 
     fn = f['fn']
     output = u_boot_console.run_command('tftpboot %x %s' % (addr, fn))
@@ -186,7 +187,7 @@ def test_net_nfs(u_boot_console):
 
     addr = f.get('addr', None)
     if not addr:
-        addr = u_boot_utils.find_ram_base(u_boot_console)
+        addr = u_boot_utils.find_ram_base(u_boot_console) + (1024 * 1024 * 4)
 
     fn = f['fn']
     output = u_boot_console.run_command('nfs %x %s' % (addr, fn))

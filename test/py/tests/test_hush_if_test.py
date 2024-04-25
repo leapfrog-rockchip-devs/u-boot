@@ -1,5 +1,6 @@
-# SPDX-License-Identifier: GPL-2.0
 # Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0
 
 # Test operation of the "if" shell command.
 
@@ -148,7 +149,7 @@ def test_hush_if_test_host_file_exists(u_boot_console):
     exec_hush_if(u_boot_console, expr, False)
 
     try:
-        with open(test_file, 'wb'):
+        with file(test_file, 'wb'):
             pass
         assert os.path.exists(test_file)
 

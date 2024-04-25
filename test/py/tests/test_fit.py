@@ -1,9 +1,8 @@
-# SPDX-License-Identifier:	GPL-2.0+
 # Copyright (c) 2013, Google Inc.
 #
+# SPDX-License-Identifier:	GPL-2.0+
+#
 # Sanity check of the FIT handling in U-Boot
-
-from __future__ import print_function
 
 import os
 import pytest
@@ -112,7 +111,6 @@ sb save hostfs 0 %(loadables2_addr)x %(loadables2_out)s %(loadables2_size)x
 
 @pytest.mark.boardspec('sandbox')
 @pytest.mark.buildconfigspec('fit_signature')
-@pytest.mark.requiredtool('dtc')
 def test_fit(u_boot_console):
     def make_fname(leaf):
         """Make a temporary filename
@@ -143,7 +141,7 @@ def test_fit(u_boot_console):
         Returns:
             Contents of file as a string
         """
-        with open(fname, 'rb') as fd:
+        with open(fname, 'r') as fd:
             return fd.read()
 
     def make_dtb():
@@ -155,7 +153,7 @@ def test_fit(u_boot_console):
         src = make_fname('u-boot.dts')
         dtb = make_fname('u-boot.dtb')
         with open(src, 'w') as fd:
-            print(base_fdt, file=fd)
+            print >> fd, base_fdt
         util.run_and_log(cons, ['dtc', src, '-O', 'dtb', '-o', dtb])
         return dtb
 
@@ -169,7 +167,7 @@ def test_fit(u_boot_console):
         """
         its = make_fname('test.its')
         with open(its, 'w') as fd:
-            print(base_its % params, file=fd)
+            print >> fd, base_its % params
         return its
 
     def make_fit(mkimage, params):
@@ -188,7 +186,7 @@ def test_fit(u_boot_console):
         its = make_its(params)
         util.run_and_log(cons, [mkimage, '-f', its, fit])
         with open(make_fname('u-boot.dts'), 'w') as fd:
-            print(base_fdt, file=fd)
+            print >> fd, base_fdt
         return fit
 
     def make_kernel(filename, text):
@@ -204,7 +202,7 @@ def test_fit(u_boot_console):
         for i in range(100):
             data += 'this %s %d is unlikely to boot\n' % (text, i)
         with open(fname, 'w') as fd:
-            print(data, file=fd)
+            print >> fd, data
         return fname
 
     def make_ramdisk(filename, text):
@@ -218,7 +216,7 @@ def test_fit(u_boot_console):
         for i in range(100):
             data += '%s %d was seldom used in the middle ages\n' % (text, i)
         with open(fname, 'w') as fd:
-            print(data, file=fd)
+            print >> fd, data
         return fname
 
     def find_matching(text, match):

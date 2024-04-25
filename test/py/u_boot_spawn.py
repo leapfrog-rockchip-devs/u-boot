@@ -1,5 +1,6 @@
-# SPDX-License-Identifier: GPL-2.0
 # Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0
 
 # Logic to spawn a sub-process and interact with its stdio.
 
@@ -58,7 +59,7 @@ class Spawn(object):
                     os.chdir(cwd)
                 os.execvp(args[0], args)
             except:
-                print('CHILD EXECEPTION:')
+                print 'CHILD EXECEPTION:'
                 import traceback
                 traceback.print_exc()
             finally:
@@ -134,7 +135,7 @@ class Spawn(object):
             the expected time.
         """
 
-        for pi in range(len(patterns)):
+        for pi in xrange(len(patterns)):
             if type(patterns[pi]) == type(''):
                 patterns[pi] = re.compile(patterns[pi])
 
@@ -143,7 +144,7 @@ class Spawn(object):
             while True:
                 earliest_m = None
                 earliest_pi = None
-                for pi in range(len(patterns)):
+                for pi in xrange(len(patterns)):
                     pattern = patterns[pi]
                     m = pattern.search(self.buf)
                     if not m:
@@ -198,7 +199,7 @@ class Spawn(object):
         """
 
         os.close(self.fd)
-        for i in range(100):
+        for i in xrange(100):
             if not self.isalive():
                 break
             time.sleep(0.1)
