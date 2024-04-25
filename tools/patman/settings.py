@@ -1,5 +1,6 @@
-# SPDX-License-Identifier: GPL-2.0+
 # Copyright (c) 2011 The Chromium OS Authors.
+#
+# SPDX-License-Identifier:	GPL-2.0+
 #
 
 from __future__ import print_function
@@ -263,7 +264,7 @@ def _ReadAliasFile(fname):
                 line = line.strip()
                 if not line or line.startswith('#'):
                     continue
-                words = line.split(None, 2)
+                words = line.split(' ', 2)
                 if len(words) < 3 or words[0] != 'alias':
                     if not bad_line:
                         bad_line = "%s:%d:Invalid line '%s'" % (fname, linenum,

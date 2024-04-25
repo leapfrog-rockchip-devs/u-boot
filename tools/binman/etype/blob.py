@@ -1,6 +1,7 @@
-# SPDX-License-Identifier: GPL-2.0+
 # Copyright (c) 2016 Google, Inc
 # Written by Simon Glass <sjg@chromium.org>
+#
+# SPDX-License-Identifier:      GPL-2.0+
 #
 # Entry-type module for blobs, which are binary objects read from files
 #
@@ -10,8 +11,8 @@ import fdt_util
 import tools
 
 class Entry_blob(Entry):
-    def __init__(self, section, etype, node):
-        Entry.__init__(self, section, etype, node)
+    def __init__(self, image, etype, node):
+        Entry.__init__(self, image, etype, node)
         self._filename = fdt_util.GetString(self._node, "filename", self.etype)
 
     def ObtainContents(self):
@@ -28,7 +29,8 @@ class Entry_blob(Entry):
             # new Entry method which can read in chunks. Then we could copy
             # the data in chunks and avoid reading it all at once. For now
             # this seems like an unnecessary complication.
-            self.SetContents(fd.read())
+            self.data = fd.read()
+            self.contents_size = len(self.data)
         return True
 
     def GetDefaultFilename(self):

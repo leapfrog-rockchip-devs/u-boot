@@ -1,6 +1,7 @@
-# SPDX-License-Identifier: GPL-2.0+
 # Copyright (c) 2016 Google, Inc
 # Written by Simon Glass <sjg@chromium.org>
+#
+# SPDX-License-Identifier:      GPL-2.0+
 #
 # Entry-type module for a U-Boot binary with an embedded microcode pointer
 #
@@ -51,31 +52,29 @@ class Entry_u_boot_ucode(Entry_blob):
             the Entry_u_boot_dtb_with_ucode entry, and uses it as the
             contents of this entry.
     """
-    def __init__(self, section, etype, node):
-        Entry_blob.__init__(self, section, etype, node)
+    def __init__(self, image, etype, node):
+        Entry_blob.__init__(self, image, etype, node)
 
     def ObtainContents(self):
-        # If the section does not need microcode, there is nothing to do
-        ucode_dest_entry = self.section.FindEntryType('u-boot-with-ucode-ptr')
-        ucode_dest_entry_spl = self.section.FindEntryType(
-            'u-boot-spl-with-ucode-ptr')
-        if ((not ucode_dest_entry or not ucode_dest_entry.target_pos) and
-            (not ucode_dest_entry_spl or not ucode_dest_entry_spl.target_pos)):
+        # If the image does not need microcode, there is nothing to do
+        ucode_dest_entry = self.image.FindEntryType('u-boot-with-ucode-ptr')
+        if ucode_dest_entry and not ucode_dest_entry.target_pos:
             self.data = ''
             return True
 
-        # Get the microcode from the device tree entry. If it is not available
-        # yet, return False so we will be called later. If the section simply
-        # doesn't exist, then we may as well return True, since we are going to
-        # get an error anyway.
-        fdt_entry = self.section.FindEntryType('u-boot-dtb-with-ucode')
-        if not fdt_entry:
+        # Handle microcode in SPL image as well
+        ucode_dest_entry = self.image.FindEntryType('u-boot-spl-with-ucode-ptr')
+        if ucode_dest_entry and not ucode_dest_entry.target_pos:
+            self.data = ''
             return True
-        if not fdt_entry.ready:
+
+        # Get the microcode from the device tree entry
+        fdt_entry = self.image.FindEntryType('u-boot-dtb-with-ucode')
+        if not fdt_entry or not fdt_entry.ucode_data:
             return False
 
         if not fdt_entry.collate:
-            # This binary can be empty
+            # This section can be empty
             self.data = ''
             return True
 
